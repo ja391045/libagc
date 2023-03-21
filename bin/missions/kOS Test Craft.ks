@@ -7,6 +7,7 @@ boot:require("launch").
 boot:require("mnv").
 boot:require("telemetry").
 boot:require("parts").
+boot:require("math").
 
 // std:string:sprintf
 SET finalString TO "1024 plus 1.114 minus True".
@@ -271,7 +272,8 @@ IF runstage:stage = 2 {
   PRINT "runstage:bump - failed.".
 }
 
-volume(1):DELETE("/runstage").
+SET _v TO VOLUME(1).
+_v:DELETE("/runstage").
 
 FUNCTION panels_moving {
   PARAMETER panels.
@@ -300,7 +302,7 @@ FUNCTION panels_open {
 syslog:init(syslog:level:debug, FALSE).
 SET solarPanels TO parts:solarpanels:getDeployable().
 IF solarPanels:LENGTH = 6 {
-  PRINT "Fetch solar panels - success.".
+  PRINT "Fetch solar panels - passed.".
 } ELSE {
   PRINT "Fetch solar panels - failed.".
 }
@@ -308,7 +310,7 @@ parts:solarpanels:deploy(solarPanels).
 WAIT UNTIL NOT panels_moving(solarPanels).
 SET isOpen TO panels_open(solarPanels).
 IF isOpen {
-  PRINT "Open solar panels - success.".
+  PRINT "Open solar panels - passed.".
 } else {
   PRINT "Open solar panels - failed.".
 }
@@ -316,7 +318,7 @@ parts:solarpanels:retract(solarPanels).
 WAIT UNTIL NOT panels_moving(solarPanels).
 SET isOpen TO panels_open(solarPanels).
 IF NOT isOpen {
-  PRINT "Retract solar panels - success.".
+  PRINT "Retract solar panels - passed.".
 } ELSE {
   PRINT "Retract solar panels - failed.".
 }
@@ -339,15 +341,24 @@ WAIT 3.
 // Once you start/stop the fuel cells, the status becomes broken.  This is a kOS bug.
 // Assume it went well, because what's the worst that could happen.
 // IF cells_running(cells) {
-  PRINT "Starting fuel cells - success.".
+  PRINT "Starting fuel cells - passed.".
 // } ELSE {
 //   PRINT "Starting fuel cells - failed.".
 // }
 parts:stopFuelCells(cells).
 WAIT 3.
 // IF NOT cells_running {
-  PRINT "Stopping fuel cells - success.".
+  PRINT "Stopping fuel cells - passed.".
 // } ELSE {
-//   PRINT "Stopping fuel cells - failed.".
+//   PRINT "Stopping fuel cells - failed.".-0.048661948884938, -74.7282677884327
 // }
 syslog:shutdown().
+
+SET rw TO math:geo:ksc:runway:west.
+
+
+IF ROUND(rw:LAT, 4) = -0.0487 AND ROUND(rw:LNG, 4) = -74.7283 AND rw:BODY:NAME = "Kerbin" {
+  PRINT "KSC Geographic Location - passed".
+} ELSE {
+  PRINT "KSC Geographic Location - failed.".
+}

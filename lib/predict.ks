@@ -35,7 +35,7 @@ FUNCTION predict_radius_at {
   PARAMETER _ship IS SHIP.
   PARAMETER _obt IS _ship:ORBIT.
 
-  LOCAL relPos = predict_pos_rel_body(utm, _ship, _obt).
-  RETURN relPos:MAG
+  LOCAL relPos IS predict_pos_rel_body(utm, _ship, _obt).
+  RETURN relPos:MAG.
 }
 

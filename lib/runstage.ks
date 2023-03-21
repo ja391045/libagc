@@ -14,10 +14,11 @@ GLOBAL runstage IS LEXICON (
 FUNCTION runstage_preserve {
   PARAMETER vol IS 1.
 
-  IF NOT volume(vol):EXISTS("/runstage") {
-    volume(vol):CREATE("/runstage").
+  LOCAL _v IS VOLUME(vol).
+  IF NOT _v:EXISTS("/runstage") {
+    _v:CREATE("/runstage").
   }
-  LOCAL fd IS volume(vol):OPEN("/runstage").
+  LOCAL fd IS _v:OPEN("/runstage").
   fd:CLEAR().
   fd:WRITE(runstage:stage:TOSTRING).
 }
@@ -29,11 +30,12 @@ FUNCTION runstage_preserve {
 FUNCTION runstage_load {
   PARAMETER vol IS 1.
 
-  IF NOT volume(vol):EXISTS("/runstage") {
+  LOCAL _v IS VOLUME(vol).
+  IF NOT _v:EXISTS("/runstage") {
     RETURN 0.
   }
 
-  SET runstage:stage TO volume(vol):OPEN("/runstage"):READALL:STRING:TONUMBER.
+  SET runstage:stage TO _v:OPEN("/runstage"):READALL:STRING:TONUMBER.
 }
 
 ////
