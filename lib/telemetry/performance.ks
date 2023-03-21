@@ -3,8 +3,10 @@
 ////
 
 boot:require("syslog").
+boot:require("telemetry/performance/atm").
 
 GLOBAL telemetry_performance IS LEXICON(
+//  "atm",             telemetry_performance_atm,
   "availableThrust", telemetry_performance_available_thrust@,
   "currentThrust",   telemetry_performance_current_thrust@,
   "availableAccel",  telemetry_performance_available_accel@,
