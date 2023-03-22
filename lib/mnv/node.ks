@@ -117,8 +117,7 @@ FUNCTION mnv_node_do {
 FUNCTION mnv_node_circularize_apoapsis {
   PARAMETER _obt IS SHIP:ORBIT.
 
-  LOCAL targetSMA IS _obt:BODY:RADIUS + _obt:APOAPSIS.
-  RETURN mnv_node_set_peri_at_apo(targetSMA, _obt).
+  RETURN mnv_node_set_peri_at_apo(_obt:APOAPSIS, _obt).
 }
 
 ////
@@ -129,8 +128,7 @@ FUNCTION mnv_node_circularize_apoapsis {
 FUNCTION mnv_node_circularize_periapsis {
   PARAMETER _obt IS SHIP:ORBIT.
 
-  LOCAL targetSMA IS _obt:BODY:RADIUS + _obt:PERIAPSIS.
-  RETURN mnv_node_set_apo_at_peri(targetSMA, _obt).
+  RETURN mnv_node_set_apo_at_peri(_obt:PERIAPSIS, _obt).
 }
 
 ////
@@ -152,16 +150,18 @@ FUNCTION mnv_node_mod_alt_at {
 
 ////
 // Raise the pariapsis point of an orbit by burning at the apoapsis point.
-// @PARAM targetSMA - The semi-major axist of the new orbit.
+// @PARAM targetAltitude - Of the new orbit.
 // @PARAM _obt - The orbit to operate on. (Default: SHIP:ORBIT)
 // @RETURN - The newly created node.
 ////
 FUNCTION mnv_node_set_apo_at_peri {
-  PARAMETER targetSMA.
+  PARAMETER targetAltitude.
   PARAMETER _obt IS SHIP:ORBIT.
 
   LOCAL start_r IS _obt:PERIAPSIS + _obt:BODY:RADIUS.
-  LOCAL dv IS math:kepler:orbit:visViva(targetSMA, start_r, _obt:SEMIMAJORAXIS, _obt:BODY:MU).
+  LOCAL targetSMA IS (_obt:BODY:RADIUS + targetAltitude + start_r) / 2.
+  LOCAL dv IS math:kepler:visViva(targetSMA, _obt, start_r).
+
   syslog:msg(
     "Setting Apoapsis to " + ROUND(start_r) + " with SMA of " + ROUND(targetSMA) + " at Periapsis requires " + ROUND(dv, 2) + "m/s.",
     syslog:level:info,
@@ -173,16 +173,17 @@ FUNCTION mnv_node_set_apo_at_peri {
 
 ////
 // Raise the apoapsis point of an orbit by burning at the periapsis point.
-// @PARAM targetSMA - The semi-major axist of the new orbit.
+// @PARAM targetAltitude - The semi-major axist of the new orbit.
 // @PARAM _obt - The orbit to operate on. (Default: SHIP:ORBIT)
 // @RETURN - The newly created node.
 ////
 FUNCTION mnv_node_set_peri_at_apo {
-  PARAMETER targetSMA.
+  PARAMETER targetAltitude.
   PARAMETER _obt IS SHIP:ORBIT.
 
   LOCAL start_r IS _obt:APOAPSIS + _obt:BODY:RADIUS.
-  LOCAL dv IS math:kepler:orbit:visViva(targetSMA, start_r, _obt:SEMIMAJORAXIS, _obt:BODY:MU). 
+  LOCAL targetSMA IS (_obt:BODY:RADIUS + targetAltitude + start_r) / 2.
+  LOCAL dv IS math:kepler:visViva(targetSMA, _obt, start_r). 
   syslog:msg(
     "Setting Periapsis to " + ROUND(start_r) + " with SMA of " + ROUND(targetSMA) + " at Apoapsis requires " + ROUND(dv,2) + "m/s.",
     syslog:level:info,
