@@ -17,9 +17,18 @@ GLOBAL mnv_node is LEXICON(
 
 ////
 // Execute a manuever node.
+// @PARAM align_time          - The buffer in seconds to get the ship the time it needs to orient towards the burn vector. The
+//                              will box align_time to between 10 and 300 seconds. (Default: 60)
+// @PARAM autowarp            - Allow time warp during the exeuction phase?  (Default: True).
+// @PARAM autostage           - Enable autostaging subsystem. (Default: True).
+// @PARAM stageUntil          - The stage at which the autostage subsystem should stop if it is enabled. (Default: 0).
+// @PARAM allowRCs            - Allow this script to use RCS during the alignment phase. (Default: TRUE).
+// @PARAM autostage_algorithm - The algorithm delegate to use to determine when autostage should stage.  (Default: staging:algorithm:flameOut).
+// @RETURN - 0 on success other than 0 on error. 
 ////
 FUNCTION mnv_node_do {
   PARAMETER align_time IS 60.
+  PARAMETER autowarp IS TRUE.
   PARAMETER autostage IS TRUE.
   PARAMETER stageUntil IS 0.
   PARAMETER allowRCS IS TRUE.
@@ -57,13 +66,45 @@ FUNCTION mnv_node_do {
   SET SAS TO FALSE.
   SET RCS TO allowRCS.
 
+  // A little bit of sanity.
+  if align_time > 300 {
+    SET align_time TO 300.
+  } ELSE IF align_time < 10 {
+    SET align_time TO 10.
+  }
+
   // IF mcp ever works, get steering lock.
   LOCK STEERING TO nd:DELTAV.
   syslog:msg("Aligning.", syslog:level:info, "mnv:node:do").
-  WAIT UNTIL math:helper:close(VANG(nd_og_dv, SHIP:FACING:VECTOR), 0, 0.25).
+  // We want our craft our hold burn vector for a full 5 seconds before we 
+  // consider ourselves aligned.
+  
+  LOCAL timeout IS TIME:SECONDS + align_time.
+  LOCAL count IS 0.
+  UNTIL count > 4 OR TIME:SECONDS > timeout {
+    IF math:helper:close(VANG(nd_og_dv, SHIP:FACING:VECTOR), 0, 0.25) {
+      SET count TO count + 1.
+    } ELSE {
+      SET count TO 0.
+    }
+    WAIT 1.
+  }
 
+  IF count < 5 {
+    syslog:msg(
+      "Cancelling burn, could not get ship aligned in less than " + align_time + " seconds.",
+      syslog:level:error,
+      "mvn:node:do"
+    ).
+    RETURN 1.
+  }
   syslog:msg("Alignment complete.",  syslog:level:info, "mnv:node:do").
-
+  IF autowarp {
+    LOCAL mnv_ut IS TIME:SECONDS + nd:ETA.
+    IF TIME:SECONDS < mnv_ut + align_time + 60 { //  Give it a little bit of buffer.
+      KUNIVERSE:TIMEWARP:WARPTO(mnv_ut - align_time - 60).
+    }
+  }
   if autostage {
     syslog:msg("Starting autostage.", syslog:level:debug, "mnv:node:do").
     staging:auto(stageUntil, autostage_algorithm, FALSE).
@@ -107,6 +148,7 @@ FUNCTION mnv_node_do {
   SET RCS TO oldRCS.
   syslog:msg("Node complete, remaining DV is: " + ROUND(nd:DELTAV:MAG, 2)+ "m/s", syslog:level:info, "mnv_node_do").
   REMOVE nd.
+  RETURN 0.
 }
 
 ////

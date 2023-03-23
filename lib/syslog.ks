@@ -52,6 +52,36 @@ FUNCTION _syslog_linefmt {
     RETURN std:string:sprintf(format, data).
 }
 
+////
+// @API: private
+// Rotate the log.
+////
+FUNCTION _syslog_rotate {
+  LOCAL curFh IS PATH(syslog["__path__"]):VOLUME:OPEN(syslog["__path__"]).
+  LOCAL curCont IS curFh:READALL.
+  LOCAL newQueue IS QUEUE().
+  LOCAL startIdx IS MAX(curCont:LENGTH - syslog["__rotate_keep__"], 0).
+  LOCAL rotateMark TO "------------- Syslog Rotate Mark -------------".
+  SET byteCount TO rotateMark:LENGTH.
+  
+  newQueue:PUSH(rotateMark).
+
+  FOR line IN curCont {
+    IF startIdx <= 0 { newQueue:PUSH(line). }.
+    SET startIdx TO startIdx - 1.
+    SET byteCount TO byteCount + line:LENGTH.
+  }
+
+  IF byteCount < syslog["__max_log_size__"] {
+    UNTIL syslog["__cache__"]:EMPTY {
+      newQueue:PUSH(syslog["__cache__"]:POP()).
+    }
+  }
+
+  SET syslog["__cache__"] TO newQueue.
+  syslog["__file__"]:CLEAR.
+}
+
 
 ////
 // @API: private
@@ -67,6 +97,9 @@ FUNCTION _syslog_process_queue {
   LOCAL processed IS 0.
 
   UNTIL syslog["__cache__"]:EMPTY OR processed >= maxProcess {
+    IF syslog["__file__"]:SIZE >= syslog["__max_log_size__"] {
+      _syslog_rotate().
+    }
     LOCAL current IS syslog["__cache__"]:pop().
     IF syslog:logLevel >= current[0] {
       syslog["__file__"]:writeln(current[1]).
@@ -84,11 +117,20 @@ FUNCTION _syslog_process_queue {
 //                        will be discarded. (Default: syslog:level:crit)
 // @PARAM - echo        - Also echo syslog to STDOUT.
 // @PARAM - destination - The log file destination, can be PATH or String. (Default: 1:/log/messages)
+// @PARAM - autoRotate  - Automatically rotate logs to prevent disk space starvation? (Default: TRUE)
+// @PARAM - maxLogSize  - The maximum size of the log in bytes, defaults to 1/2 the size of the destination volume,
+//                        it has a minimum size of 4096.  Any size given < 4096 will be ignored in lieu of 4096.
+// @PARAM - rotateKeep  - The number of messages to keep when log file is rotated. If the kept number of messages is
+//                        > maxLogSize, none will be kept. (Default: 50)  This will almost certainly be the case when
+//                        if you go to minsize of 4096 and keep 50 lines.   
 //// 
 FUNCTION syslog_init {
     PARAMETER logLevel IS syslog:level:crit.
     PARAMETER echo IS FALSE.
     PARAMETER destination IS PATH("1:/log/messages").
+    PARAMETER autoRotate IS TRUE.
+    PARAMETER maxLogSize IS -1.
+    PARAMETER rotateKeep IS 50.
 
     SET syslog:logLevel TO logLevel.
     // If syslog has been previously initialized, flush the message queue.
@@ -105,6 +147,17 @@ FUNCTION syslog_init {
     } ELSE { 
         SET errno TO 200.
         RETURN FALSE.
+    }
+
+    SET syslog["__auto_rotate__"] TO autoRotate.
+    SET syslog["__rotate_keep__"] TO rotateKeep.
+
+    IF maxLogSize <= 0 {
+      SET syslog["__max_log_size__"] TO pDest:VOLUME:CAPACITY * .2.
+    } ELSE IF maxLogSize < 4096 {
+      SET syslog["__max_log_size__"] TO 4096.
+    } ELSE {
+      SET syslog["__max_log_size__"] TO maxLogSize.
     }
 
     // Assume last element of destination is the filename.

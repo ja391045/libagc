@@ -129,13 +129,13 @@ FUNCTION math_helper_wrapTo360 {
     SET wrapped TO MOD(ABS(_d), 360).
   }
   IF syslog:loglevel > syslog:level:info {
-    syslog:msg:debug(
+    syslog:msg(
       "Wrapping " + _d + " to 360, result is " + wrapped + ".",
       syslog:level:debug,
       "math:helper:wrapTo360"
     ).
   }
-  RETURN clamped.
+  RETURN wrapped.
 }
 
 ////

@@ -33,7 +33,7 @@ FUNCTION math_eta_periapsis {
 FUNCTION math_eta_apoapsis {
     PARAMETER _obt IS SHIP:ORBIT.
 
-    return math:kepler:timeFromShip(-179, _obt).
+    return math:kepler:timeFromShip(180, _obt).
 }
 
 ////
@@ -55,4 +55,9 @@ FUNCTION math_eta_peri_to_peri {
     PARAMETER _obt IS SHIP:ORBIT.
 
     return math:kepler:timeFromPeri(0, _obt).
+}
+
+
+FUNCTION etaToLatLng {
+
 }

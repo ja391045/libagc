@@ -6,14 +6,11 @@ boot:require("std").
 
 GLOBAL math_kepler IS LEXICON(
     "visViva",             math_kepler_vis_viva@,
-    "eccentricAnomalyRad", math_kepler_eccentric_anomaly_rad@,
-    "eccentricAnomalyDeg", math_kepler_eccentric_anomaly_deg@,
-    "meanAnomalyRad",      math_kepler_mean_anomaly_rad@,
-    "meanAnomalyDeg",      math_kepler_mean_anomaly_deg@,
-    "meanMotionRad",       math_kepler_mean_motion_rad@,
-    "meanMotionDeg",       math_kepler_mean_motion_deg@,
     "timeFromShip",        math_kepler_time_from_ship@,
-    "timeFromPeri",        math_kepler_time_from_peri@
+    "timeFromPeri",        math_kepler_time_from_peri@,
+    "eccentricAnomaly",    math_kepler_eccentric_anomaly@,
+    "meanAnomaly",         math_kepler_mean_anomaly@,
+    "meanMotion",          math_kepler_mean_motion@
 ).
 
 
@@ -33,149 +30,76 @@ FUNCTION math_kepler_vis_viva {
     RETURN end - start.
 }
 
+
 ////
-// Eccentric Anomaly.  Calculate the eccentric anomaly from a given true anomaly.
-// @PARAM trueAnomaly - This *must* be expressed in degrees between -180 and 180.  The calculation
-//                      for any true anomaly from periapsis "up to" the apoapsis is in positive 
-//                      degrees 0 to 180, with 180 degrees being the true anomaly of apoapsis. Once you 
-//                      pass the apoapsis and heading back "down to" the periapsis, then degrees count
-//                      from -179 up to 0
-// @PRAM   _obt       - The orbit to calculate for, default is SHIP:ORBIT.
-// @RETURN - The eccentric anomaly in *radians*.  If trueAnomaly is a positive value, this function will
-//           yield the Eccentric Anomaly from Periapsis to TrueAnomaly.  If the value is negative, this
-//           function will yield the Eccentric Anomaly from True Anomaly to Periapsis.  If the result is
-//           > 2 * PI, then the function failed.
+// Calculate the eccentric anomaly given the true anomaly.  This should work for elliptic and
+// hyperbolic orbits.  Parabolic orbits are not yet implemented.
+// @PARAM f - The true anomaly in degrees in the rage [0-360], any value greater than 360 will be
+//            wrapped (i.e. 721 degrees = 1 degrees).
+// @PARAM _obt - The orbit to calculate the eccentric anoomaly for.
+// @RETURN - The eccentric anomaly in degrees.
 ////
-FUNCTION math_kepler_eccentric_anomaly_rad {
-    PARAMETER trueAnomaly. 
+FUNCTION math_kepler_eccentric_anomaly {
+    PARAMETER f.        
     PARAMETER _obt IS SHIP:ORBIT.
 
-    LOCAL cos_ta_rad IS COS(trueAnomaly) * CONSTANT:DEGTORAD.
+    SET f TO math:helper:wrapTo360(f).
     LOCAL _e IS _obt:ECCENTRICITY.
-
-    LOCAL absEccAnomaly IS 0. 
-    SET _base to (_e + cos_ta_rad) / (1 + _e * cos_ta_rad).
-    LOCAL result IS 2 * CONSTANT:PI + 1.
-
-    IF _obt:ECCENTRICITY < 1 {
-        SET absEccAnomaly TO ARCCOS(_base).
-    } ELSE IF _obt:ECCENTRICITY > 1 {
-        SET absEccAnomaly TO math:helper:arccosh(_base).
-    } ELSE {
-        // Parabolic orbit (_e = 1) - not implemented.
-        syslog:msg:crit(
-            "Parabolic Eccentric Anomaly is not implemented, halting.", 
-            syslog:level:crit, 
-            "math:kepler:eccentricAnomalyRad"
-        ).
-        RETURN result.
-    }
-
-    IF trueAnomaly < 0 {
-        SET result TO absEccAnomaly * -1.
-    }
-    SET result TO absEccAnomaly.
-    IF syslog:loglevel > syslog:level:info {
-        LOCAL _args IS LEXICON(
-            "ta", trueAnomaly,
-            "result", result,
-            "E", _e
-        ).
-        LOCAL msgfmt IS "Calculate eccentric anomaly for true ${ta} with eccentricity ${E}, result: ${result}.".
-        LOCAL msg IS std:string:sprintf(msgfmt, _args).
-        syslog:msg(msg, syslog:level:debug, "math:kepler:eccentricAnomaly").
-    }
-}
-
-////
-// @SEE math_kepler_eccentric_anomaly_rad
-// @PARAM trueAnomaly - @SEE math_kepler_eccentric_anomaly_rad
-// @PARAM _obt - @SEE math_kepler_eccentric_anomaly_rad
-// @RETURN - @SEE math_kepler_eccentric_anomaly_rad, except this return is in degrees [-180 < 0 < 180]
-////
-FUNCTION math_kepler_eccentric_anomaly_deg {
-    PARAMETER trueAnomaly.
-    PARAMETER _obt IS SHIP:ORBIT.
-
-    LOCAL ea_deg IS math_kepler_eccentric_anomaly_rad(trueAnomaly, _obt) * CONSTANT:RADTODEG.
-    IF ea_deg > 2 * COnSTANT:PI * CONSTANT:RADTODEG {
-        RETURN ea_deg.
-    }
-    LOCAL clamped IS math:helper:clampTo180(clamped).
-    RETURN clamped.
-}
-
-////
-// Calculate the mean anomaly from a given true anomaly.
-// @PARAM trueAnomaly -  @SEE math_kepler_eccentric_anomaly_rad for restrictions.
-// @PARAM _obt - The orbit to solve in.
-// @RETURN - The mean anomaly in terms of the true anomaly.
-////
-FUNCTION math_kepler_mean_anomaly_rad {
-    PARAMETER trueAnomaly.
-    PARAMETER _obt IS SHIP:ORBIT.
-
-    LOCAL ecc_a_rad IS math_kepler_eccentric_anomaly_rad(trueAnomaly, _obt).
-    LOCAL _e IS _obt:ECCENTRICITY.
-    LOCAL result IS 2 * CONSTANT:PI + 1.
+    LOCAL ea IS 361.
     
-
-    IF _obt:ECCENTRICITY < 1 {
-        SET result TO ecc_a_rad - _e * (sin(trueAnomaly) * CONSTANT:DEGTORAD). 
-    } ELSE IF _obt:ECCENTRICITY < 1 {
-        SET result TO _e * math:helper:sinh(ecc_a_rad) - ecc_a_rad.
-    } ELSE{
-        syslog:msg(
-            "Parabolic mean anomaly is not yet implemented.",
-            syslog:level:crit,
-            "math:kepler:meanAnomalyRad"
-        ).
-        RETURN result.
+    IF _e < 1 {
+        // eliptical
+        SET ea TO (2 * ARCTAN( SQRT( ( 1 - _e ) / ( 1 + _e ) ) * TAN( f / 2 ) )).
+    } ELSE IF _e > 1  {
+        // hyperbolic
+        SET ea TO (math:helper:arccosh( ( _e + COS(f) ) / ( 1 + _e * COS(f) ) )).
     }
-
-    IF syslog:loglevel > syslog:level:info {
-        syslog:msg(
-            "Calculate mean anomaly of " + trueAnomaly + " is " + result + ".",
-            syslog:level:debug,
-            "math:kepler:meanAnomalyRad"
-        ).
-    }
-
-    RETURN result.
+    //parabolic
+    syslog:msg(
+        "Cannot calculate eccentric anomaly of parabolic orbit. Not yet implemented.",
+        syslog:level:crit,
+        "math:kepler:eccentricAnomaly"
+    ).
+    RETURN ea.
 }
 
 ////
-// @SEE math_kepler_mean_anomaly_rad
+// Given a true anomaly, calculate te mean anomaly. Currently this only works on elliptical and hyperbolic 
+// orbits.  Parabolics aren't yet implemented.
+// @PARAM f - The true anomaly in degrees [ 0 < 360 ].  Any degree > 360 will be wrapped.
+// @PARAM _obt - The orbit to calculate in.
+// @RETURN - The mean anomaly in degrees.
 ////
-FUNCTION math_kepler_mean_anomaly_deg {
-    PARAMETER trueAnomaly.
+FUNCTION math_kepler_mean_anomaly {
+    PARAMETER f.
     PARAMETER _obt IS SHIP:ORBIT.
 
-    LOCAL result IS math_kepler_mean_anomaly_rad(trueAnomaly, _obt).
-    RETURN result * CONSTANT:RADTODEG.
+    LOCAL ea IS math_kepler_eccentric_anomaly(f, _obt).
+    LOCAL _e IS _obt:ECCENTRICITY.
+
+    IF ea > 360 {
+        RETURN ea. // parabolics not yet implemented.
+    }
+    IF _e < 1 {
+        // eliptical
+        RETURN (ea - _e * SIN(ea)).// * CONSTANT:RADTODEG.
+    } 
+    // hyperbolic
+    RETURN (_e * math:helper:sinh(ea) - ea).// * CONSTANT:RADTODEG.
 }
 
+
 ////
-// calculate the mean motion of the given orbit.
-// @PARAM _obt - The orbit to calculate.
-// @RETURN - The mean motion of the body in the specified orbit in degrees per second.
+// Calculate the mean motion of the orbit specified.
+// @PARAM _obt - The orbit to calculate for.
+// @RETURN - The mean motino of the orbit.
 ////
-FUNCTION math_kepler_mean_motion_deg {
+ FUNCTION math_kepler_mean_motion {
     PARAMETER _obt.
 
-    RETURN math_kepler_mean_motion_rad(_obt) * CONSTANT:RADTODEG.
-}
+    RETURN 360 / obt:PERIOD.
+ }
 
-////
-// calculate the mean motion of the given orbit.
-// @PARAM _obt - The orbit to calculate.
-// @RETURN - The mean motion of the body in the specified orbit in radians.
-////
-FUNCTION math_kepler_mean_motion_rad {
-    PARAMETER _obt.
-
-    RETURN 2 * CONSTANT:PI / _obt:PERIOD.
-}
 
 ////
 // Estimate the time in seconds from a the ship's "current" position to the true anomaly given.
@@ -184,49 +108,55 @@ FUNCTION math_kepler_mean_motion_rad {
 // pass these in since the game does it's level best keep them updated.  However, if you are going
 // to use the output of this function to create a node, do it very fast.
 //
-// @PARAM trueAnomaly - The anomaly to measure time until in degrees [-180 < 0 < 180].
-// @PARAM -obt - The orbit to examine.
-// @PARAM meanMotionEpoch - The mean motion at epoch.
-// @PARAM epoch - The epoch.
+// The basic idea here is to take the Mean Anomaly minus Mean Anomaly at epoch and divide by Mean
+// Motion.  This will give us a time from which we must then subtract the difference between now and
+// the epoch at which Mean Anomaly At Epoch was created.  
+//
+// @PARAM f                  - The anomaly to measure time until in degrees.  If more than 360 degrees are 
+//                             given then it will be wrapped, and whole orbital periods will be added for each 
+//                             additional 360.
+// @PARAM _obt               - The orbit to examine.
+// @PARAM meanAnomalyAtEpoch - The mean motion at epoch.  By default, this is taken from the _obt structure, 
+//                             and you probably want that.  The reason is it is parameterized is so that we
+//                             can capture it's value as soon as the function is called.
+// @PARAM epoch              - The time that meanAnomalyAtEpoch was taken.  Like meanAnomalyAtEpoch this is taken
+//                             from the _obt strucutre provided so that an immediate capture of the value can be taken.
+// @PARAM now                - This instant in time, parameterized so that it is capture immediately.
 // @RETURN The time in seconds it will take to reach the given mean anomaly.
 ////
 FUNCTION math_kepler_time_from_ship {
-    PARAMETER trueAnomaly.
+    PARAMETER f.
     PARAMETER _obt IS SHIP:ORBIT.
     PARAMETER meanAnomalyAtEpoch IS _obt:MEANANOMALYATEPOCH.
     PARAMETER epoch IS _obt:EPOCH.
+    PARAMETER now IS TIME:SECONDS.
 
-    LOCAL now IS TIME:SECONDS.
-    LOCAL _n IS math_kepler_mean_motion_rad(_obt).
-    LOCAL _m IS math_kepler_mean_anomaly_rad(trueAnomaly).
-    
-    LOCAL _mae IS meanAnomalyAtEpoch * CONSTANT:DEGTORAD.
-    LOCAL _t IS ((_m - _mae) / _n).
-    SET _t TO _t - (epoch - now).
-    PRINT "TA: " + trueAnomaly + ", M: " + _m + ", MM: " + _n + ", T: " + _t + ".".
-    IF _t < 0 {
-       RETURN _t + _obt:PERIOD.
-    }
-    RETURN _t - _obt:PERIOD.
+    LOCAL epoch_diff IS now - epoch.
+    LOCAL additional_orbits IS FLOOR(f / 360).
+    LOCAL true_f IS math:helper:wrapTo360(f).
+    LOCAL _n IS math_kepler_mean_motion(_obt).
+    LOCAL _m IS math_kepler_mean_anomaly(true_f).
+
+    LOCAL eta_with_epoch IS ( _m - meanAnomalyAtEpoch ) / _n.
+    LOCAL _eta IS eta_with_epoch - epoch_diff.
+    IF _eta < 0 { SET _eta TO _eta + _obt:PERIOD. }.
+    SET _eta TO _eta + additional_orbits * _obt:PERIOD.
+    RETURN _eta.
 }
 
 ////
-// Estimate the time it will take the vessel to travel from the orbit periapsis to the given
+// Estimate the time it will take an object to travel from the orbit periapsis to the given
 // true anomaly.
 // @PARAM trueAnomaly - The anomaly to measure time until in degrees [-180 < 0 < 180].
-// @PARAM _obt - The orbit to measrue in.
-// @RETURN - The time in seconds it takes the ship to travel from periapsis to the given anomaly.
+// @PARAM _obt        - The orbit to measrue in.
+// @RETURN            - The time in seconds it takes the ship to travel from periapsis to the given anomaly.
 ////
 FUNCTION math_kepler_time_from_peri {
     PARAMETER trueAnomaly.
     PARAMETER _obt IS SHIP:ORBIT.
     
-    LOCAL _n IS math_kepler_mean_motion_rad(_obt).
-    LOCAL _m IS math_kepler_mean_anomaly_rad(trueAnomaly).
-    LOCAL _t IS _m / _n.
-    PRINT "_t IS " + _t.
-    IF _t < 0 {
-        RETURN _t + _obt:PERIOD.
-    }
-    RETURN _t.
+    LOCAL _n IS math_kepler_mean_motion(_obt).
+    LOCAL _m IS math_kepler_mean_anomaly(trueAnomaly).
+    LOCAL _eta IS _m / _n.
+    RETURN _eta.   
 }

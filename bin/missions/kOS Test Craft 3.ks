@@ -35,18 +35,16 @@ UNTIL runstage:stage > max_runstage {
     SET eta_diff TO ABS(eta_a - eta_b).
     IF math:helper:close(eta_a, eta_b, 0.3) {
       PRINT "Testing ETA to Periapsis: Passed".
-      SET skipBump TO TRUE.
     } ELSE {
       PRINT "Testing ETA to Periapsis: Failed.".
       PRINT "My ETA: " + eta_a + ", kOS ETA: " + eta_b + " differs by " + eta_diff.
       SET skipBump TO TRUE.
     }
-    SET eta_a TO math:eta:apoapsis().
     SET eta_b TO SHIP:ORBIT:ETA:APOAPSIS.
+    SET eta_a TO math:eta:apoapsis().
     SET eta_diff TO ABS(eta_a - eta_b).
     IF math:helper:close(eta_a, eta_b, 0.3) {
       PRINT "Testing ETA to Apoapsis: Passed".
-      SET skipBump TO TRUE.
     } ELSE {
       PRINT "Testing ETA to Apoapsis: Failed.".
       PRINT "My ETA: " + eta_a + ", kOS ETA: " + eta_b + " differs by " + eta_diff.
@@ -57,7 +55,6 @@ UNTIL runstage:stage > max_runstage {
     SET eta_diff TO ABS(eta_a - eta_b).
     IF math:helper:close(eta_a, eta_b, 0.05) {
       PRINT "Testing ETA from Periapsis to Periapsis: Passed".
-      SET skipBump TO TRUE.
     } ELSE {
       PRINT "Testing ETA from Periapsis to Periapsis: Failed.".
       PRINT "My ETA: " + eta_a + ", kOS ETA: " + eta_b + " differs by " + eta_diff.
@@ -81,21 +78,21 @@ UNTIL runstage:stage > max_runstage {
   } ELSE IF runstage:stage = 5 {
     mnv:node:do(30, TRUE, 2).
   } ELSE IF runstage:stage = 6 {
-    // Test our shniz in an eccentric orbit.
+    // Test our shniz in a round-ish orbit.
     SET eta_a TO math:eta:periapsis().
     SET eta_b TO SHIP:ORBIT:ETA:PERIAPSIS.
     SET eta_diff TO ABS(eta_a - eta_b).
-    IF math:helper:close(eta_a, eta_b, 0.05) {
+    IF math:helper:close(eta_a, eta_b, 0.3) {
       PRINT "Testing ETA to Periapsis: Passed".
     } ELSE {
       PRINT "Testing ETA to Periapsis: Failed.".
       PRINT "My ETA: " + eta_a + ", kOS ETA: " + eta_b + " differs by " + eta_diff.
       SET skipBump TO TRUE.
     }
-    SET eta_a TO math:eta:apoapsis().
     SET eta_b TO SHIP:ORBIT:ETA:APOAPSIS.
+    SET eta_a TO math:eta:apoapsis().
     SET eta_diff TO ABS(eta_a - eta_b).
-    IF math:helper:close(eta_a, eta_b, 0.05) {
+    IF math:helper:close(eta_a, eta_b, 0.3) {
       PRINT "Testing ETA to Apoapsis: Passed".
     } ELSE {
       PRINT "Testing ETA to Apoapsis: Failed.".
