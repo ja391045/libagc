@@ -23,9 +23,8 @@ UNTIL runstage:stage > max_runstage {
 	} ELSE IF runstage:stage = 2 {
     PRINT "Executing circulization node.".
     UNLOCK STEERING.
-		mnv:node:do(60, TRUE, 2).
+		mnv:node:do(60, TRUE, TRUE, 2).
     WAIT 1.
-    REMOVE newNode.
     PRINT "Node execution complete.".
   }
   syslog:upload().
