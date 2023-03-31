@@ -275,6 +275,32 @@ IF runstage:stage = 2 {
 SET _v TO VOLUME(1).
 _v:DELETE("/runstage").
 
+//// Test some math functions.
+SET test_angle TO 90 * CONSTANT:DEGTORAD.
+SET test_angle_var TO math:helper:rad:cos(test_angle).
+IF math:helper:close(test_angle_var, 0, 0.000001) {
+  PRINT "Testing cos in radians: Passed".
+} else {
+  PRINT "Testing cos in radians: Failed".
+  PRINT "Expected 0, got " + test_angle_var + ".".
+}
+
+SET test_angle_var TO math:helper:rad:sin(test_angle).
+IF math:helper:close(test_angle_var, 1, 0.000001) {
+  PRINT "Testing sin in radians: Passed".
+} else {
+  PRINT "Testing sin in radians: Failed".
+  PRINT "Expected 1, got " + test_angle_var + ".".
+}
+
+SET test_angle_var TO math:helper:rad:tan(ROUND(test_angle, 4)).
+IF math:helper:close(test_angle_var, -272241.808409, 0.0001) {
+  PRINT "Testing tan in radians: Passed".
+} else {
+  PRINT "Testing tan in radians: Failed".
+  PRINT "Expected -272241.808409, got " + test_angle_var + ".".
+}
+
 FUNCTION panels_moving {
   PARAMETER panels.
 

@@ -82,7 +82,7 @@ FUNCTION mnv_node_do {
   LOCAL timeout IS TIME:SECONDS + align_time.
   LOCAL count IS 0.
   UNTIL count > 4 OR TIME:SECONDS > timeout {
-    IF math:helper:close(VANG(nd_og_dv, SHIP:FACING:VECTOR), 0, 0.25) {
+    IF math:helper:close(VANG(nd_og_dv, SHIP:FACING:VECTOR), 0, 0.5) {
       SET count TO count + 1.
     } ELSE {
       SET count TO 0.
@@ -96,6 +96,11 @@ FUNCTION mnv_node_do {
       syslog:level:error,
       "mvn:node:do"
     ).
+    UNLOCK STEERING.
+    UNLOCK THROTTLE.
+    SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
+    SET SAS TO oldSAS.
+    SET RCS TO oldRCS.
     RETURN 1.
   }
   syslog:msg("Alignment complete.",  syslog:level:info, "mnv:node:do").
@@ -132,7 +137,7 @@ FUNCTION mnv_node_do {
    }
    // We still have a tiny bit to burn.
    IF nd:DELTAV:MAG <= 0.1 {
-    WAIT UNTIL VDOT(nd_og_dv, nd:DELTAV) < 0.5.
+    WAIT UNTIL VDOT(nd_og_dv, nd:DELTAV) < 0.2.
     LOCK THROTTLE TO 0.
     SET tset TO 0.
     SET done TO TRUE.

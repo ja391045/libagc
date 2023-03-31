@@ -10,13 +10,15 @@ GLOBAL syslog IS LEXICON(
       "error", 1,
       "warn",  2,
       "info",  3,
-      "debug", 4
+      "debug", 4,
+      "trace", 5
     ),
     "logLevel",  0,
     "__cache__", QUEUE(),
     "__ready__", FALSE,
     "__upload__", FALSE,
-    "__echo__", FALSE
+    "__echo__", FALSE,
+    "__rotate__", TRUE
 ).
 
 
@@ -97,7 +99,7 @@ FUNCTION _syslog_process_queue {
   LOCAL processed IS 0.
 
   UNTIL syslog["__cache__"]:EMPTY OR processed >= maxProcess {
-    IF syslog["__file__"]:SIZE >= syslog["__max_log_size__"] {
+    IF syslog["__file__"]:SIZE >= syslog["__max_log_size__"] AND syslog["__rotate__"] {
       _syslog_rotate().
     }
     LOCAL current IS syslog["__cache__"]:pop().
@@ -132,6 +134,7 @@ FUNCTION syslog_init {
     PARAMETER maxLogSize IS -1.
     PARAMETER rotateKeep IS 50.
 
+    SET syslog["__rotate__"] TO autoRotate.
     SET syslog:logLevel TO logLevel.
     // If syslog has been previously initialized, flush the message queue.
     IF syslog:HASKEY("__file__") {
@@ -175,7 +178,7 @@ FUNCTION syslog_init {
     IF NOT pDest:VOLUME:EXISTS(fullPath) {
       pDest:VOLUME:CREATE(fullPath).
     }
-    SET syslog["__path__"] TO fullPath.
+    SET syslog["__path__"] TO pDest:TOSTRING.
     SET syslog["__file__"] TO pDest:VOLUME:OPEN(fullPath).
     syslog["__file__"]:READALL().
 
@@ -226,10 +229,13 @@ FUNCTION syslog_shutdown {
 FUNCTION syslog_upload {
   PARAMETER timeout IS 30.
 
+  PRINT "Uploading " + syslog["__path__"] + ".".
   LOCAL ksc_log_dst IS PATH("0:/log/" + SHIP:NAME + ".log").
   LOCAL tm_out IS TIME:SECONDS + timeout.
   LOCAL done IS FALSE.
   LOCAL success IS FALSE.
+
+  IF ksc_log_dst:TOSTRING = syslog["__path__"]:TOSTRING { PRINT "Done". RETURN TRUE. }.
 
   UNTIL done {
     IF HOMECONNECTION:ISCONNECTED {
@@ -245,5 +251,6 @@ FUNCTION syslog_upload {
       WAIT 1.
     }
   }
+  PRINT "Upload Done.".
   RETURN success.
 }

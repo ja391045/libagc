@@ -83,7 +83,7 @@ UNTIL runstage:stage > max_runstage {
     PRINT "Creating circularization maneuver, need " + newNode:DELTAV:MAG + "m/s.".
   } ELSE IF runstage:stage = 2 {
     PRINT "Executing circularization burn.".
-    mnv:node:do(90, FALSE, 0).
+    mnv:node:do(90, TRUE, FALSE, 0).
   } ELSE IF runstage:stage = 3 {
     SET oldRCS TO RCS.
     SET oldSAS TO SAS.
@@ -107,7 +107,7 @@ UNTIL runstage:stage > max_runstage {
   } ELSE IF runstage:stage = 4 {
     PRINT "Plotting transfer orbit 100km.".
     SET targetSMA TO ((SHIP:ORBIT:BODY:RADIUS * 2) + SHIP:ORBIT:PERIAPSIS + 100000) / 2.
-    SET transferNode TO mnv:node:setApoAtPeri(targetSMA).
+    SET transferNode TO mnv:node:setApoAtPeri(100000).
     ADD transferNode.
     SET newOrbit TO transferNode:ORBIT.
   } ELSE IF runstage:stage = 5 {
@@ -116,11 +116,11 @@ UNTIL runstage:stage > max_runstage {
     ADD circularNode.
   } ELSE IF runstage:stage = 6 {
     PRINT "Executing transfer orbit.".
-    mnv:node:do(90, FALSE, 0).
+    mnv:node:do(90, TRUE, FALSE, 0).
     WAIT 2.
   } ELSE IF runstage:stage = 7 {
     PRINT "Executing circularization.".
-    mnv:node:do(90, FALSE, 0).
+    mnv:node:do(90, TRUE, FALSE, 0).
     WAIT 2.
   }
 

@@ -30,6 +30,24 @@ FUNCTION __math_geo_init__ {
         "runway", runwayBounds,
         "launchpad", launchPadBounds
     ).
+    SET math_geo["peaks"] TO LEXICON(
+        "Moho",    6818,
+        "Eve",     7541,
+        "Gilly",   6401,
+        "Kerbin",  6768,
+        "Mun",     7049,
+        "Minmus",  5724,
+        "Duna",    8268,
+        "Ike",     12738,
+        "Dres",    5670,
+        "Jool",    0,
+        "Laythe",  6079,
+        "Vall",    7985,
+        "Tylo",    12904,
+        "Bop",     21757,
+        "Pol",     4891,
+        "Eeloo",   3797
+    ).
 }
 
 ////

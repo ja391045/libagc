@@ -1,3 +1,5 @@
+GLOBAL __boot_no_compile IS FALSE.
+
 GLOBAL boot IS LEXICON(
   "require", boot_require@
 ).
@@ -29,7 +31,12 @@ FUNCTION boot_require {
         libPathDst:VOLUME:CREATEDIR(currentDir).
       }
     }
-    COPYPATH(libPathSrc, libPathDst).
+    IF __boot_no_compile {
+      COPYPATH(libPathSrc, libPathDst).
+    } ELSE {
+      SET libPathDst TO libPathDst:CHANGEEXTENSION("ksm").
+      COMPILE libPathSrc TO libPathDst.
+    }
   RUNONCEPATH(libPathDst).
 }
 
