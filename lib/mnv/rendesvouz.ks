@@ -9,22 +9,22 @@ GLOBAL mnv_rendesvouz IS LEXICON(
 ).
 
 ////
-// Sweep the chaser ship's orbit and get a time to transfer to target
-// orbit at each point on the sweep.   This is an expensive function, so
-// use as sparingly and narrowly as possible.
-// @PARAM _chaser - The vessel initiating the rendezvous.
-// @PARAM _target - The target of the rendezvous.
-// @PARAM _start  - The relative to the orbital period to start "0" would be periapsis.
-// @PARAM _end    - A timespan in seconds relative to the sweep start when it should end.
-// @RETURN - A structure correlating the orbital time from periapsis to both a true anomaly,
-//           as well as the time it would take to transfer from the true anomaly to the target
-//           orbit.
+// Calculate the phase angle required, for transfer if both orbits were circular.  This only works
+// if the ships are orbiting the same body.
+// @PARAM _chaser - The ship that will be moving to rendesvouz with the target.
+// @PARAM _target - The ship that the chaser will move to.
+// @RETURN - The phase in angle in degrees toward prograde.
 ////
-FUNCTION mnv_rendesvouz_sweep {
+FUNCTION math_rendesvouz_phase_angle {
     PARAMETER _chaser IS SHIP.
     PARAMETER _target IS TARGET.
-    PARAMETER _start  IS 0.
-    PARAMETER _end IS ORBIT:PERIOD.
 
-    LOCAL start_ta IS 0.
-} 
+    // We need to calculate the length of time the transfer will take.
+    LOCAL xferSMA IS (_chaser:ORBIT:SEMIMAJORAXIS + _target:ORBIT:SEMIMAJORAXIS) / 2.
+    LOCAL xferPeriod IS  math:kepler:period(xferSMA, _chaser:ORBIT:BODY) / 2.
+    LOCAL targetN IS math:kepler:meanMotion(_target:ORBIT).
+    LOCAL targetTransit IS xferPeriod * targetN. // degrees of mean motion during transfer
+
+    
+
+}

@@ -95,12 +95,14 @@ FUNCTION staging_do_stage {
   SET prevThrottle TO THROTTLE.
   IF NOT coldStart {
     IF safeStage {
+      syslog:msg("Locking throttle to 0 for safe stage.", syslog:level:debug, "staging:doStage").
       LOCK THROTTLE TO 0.
       WAIT 0.5.
     }
   }
   STAGE.
   WAIT UNTIL STAGE:READY.
+  syslog:msg("Restoring throttle to " + prevThrottle + ".", syslog:level:debug, "staging:doStage").
   LOCK THROTTLE TO prevThrottle.
   syslog:msg("Ending stage operation.", syslog:level:info, "__staging_do_stage").
 }

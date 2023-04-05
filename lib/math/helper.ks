@@ -29,7 +29,7 @@ FUNCTION math_helper_accuracy_degrees {
   // Let's say for the smallest orbits, we need accuracy to the 1,000th of a degree, and the very most accurate
   // we can be 1E-8
   LOCAL _max_accuracy IS 0.0000000001.
-  LOCAL _min_accuracy IS 0.001.
+  LOCAL _min_accuracy IS 0.0001.
 
   LOCAL require IS 1000 / (_obt:PERIOD ^ 2).
 
@@ -66,13 +66,13 @@ FUNCTION math_helper_clampTo180 {
 }
 
 ////
-// Take a number of degrees in the range [-179 - 180] and clamp it to the range [0-360].
-// @PARAM _d - A number in -180-180 degrees.
+// Take a number of degrees and clamp it to the range [0-360].
+// @PARAM _d - A number of  degrees.
 // @return - The number in [0-360] notation.
 ////
 FUNCTION math_helper_clampTo360 {
   PARAMETER _d.
-  LOCAL clamped IS _d.
+  LOCAL clamped IS math_helper_wrapTo360(_d).
   IF _d < 0 { SET clamped TO _d + 360. }.
   IF syslog:loglevel >= syslog:level:trace {
     syslog:msg(

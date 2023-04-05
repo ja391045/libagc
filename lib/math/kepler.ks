@@ -20,7 +20,8 @@ GLOBAL math_kepler IS LEXICON(
     "trueAnomalyAt",       math_kepler_true_anomaly_at@,
     "meanToEccentric",     math_kepler_mean_to_eccentric@,
     "meanToEccentricR",    math_kepler_mean_to_eccentric_r@,
-    "eccentricToTrue",     math_kepler_eccentric_to_true@
+    "eccentricToTrue",     math_kepler_eccentric_to_true@,
+    "focusSeparation",     math_kepler_focus_separation@
 ).
 
 ////
@@ -69,13 +70,13 @@ FUNCTION math_kepler_period {
 
 ////
 // Use Vis Viva to get the orbital radius of a vessel at a future point in time..
-// @PARAM _obt - The obt to calculate for.
 // @PARAM _ut   - The universal time to predict.
+// @PARAM _ship - The ship to calculate for.
 // @RETURN - The radius of the orbit at a given point in time.
 ////
 FUNCTION math_kepler_radiusat {
-    PARAMETER _ship IS SHIP.
     PARAMETER ut IS TIME:SECONDS.
+    PARAMETER _ship IS SHIP.
 
     LOCAL _ut IS 0.
     IF ut:ISTYPE("TimeStamp") {
@@ -450,7 +451,7 @@ FUNCTION math_kepler_mean_anomaly {
 // @RETURN - The mean motino of the orbit.
 ////
  FUNCTION math_kepler_mean_motion {
-    PARAMETER _obt.
+    PARAMETER _obt IS SHIP:ORBIT.
 
     RETURN SQRT(_obt:BODY:MU / _obt:SEMIMAJORAXIS ^ 3) * CONSTANT:RADTODEG.
  }
@@ -597,4 +598,18 @@ FUNCTION math_kepler_true_anomaly_at {
         RETURN math_kepler_eccentric_to_true(futureEa:result, _obt) + _addDeg.
     }
     RETURN futureEa.
+}
+
+
+////
+// Calculate the distance between the primary focus and conjugate focus of the orbital ellipse.
+// @PARAM - _obt - The orbit to calcualte.
+// @RETURN - The distance between the primary focus and conjugate focus of the eliptical orbit,
+//           if given a circular orbit, like e < 0.00000001 or so, then the distance betwween the
+//           foci is going to be zero, or near enough to make division a problem.
+////
+FUNCTION math_kepler_focus_separation {
+    PARAMETER _obt IS SHIP:ORBIT.
+
+    RETURN 2 * _obt:SEMIMAJORAXIS * _obt:ECCENTRICITY.
 }

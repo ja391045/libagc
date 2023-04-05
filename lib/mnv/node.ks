@@ -12,7 +12,8 @@ GLOBAL mnv_node is LEXICON(
   "circularizeApoapsis",  mnv_node_circularize_apoapsis@,
   "circularizePeriapsis", mnv_node_circularize_periapsis@,
   "setApoAtPeri",         mnv_node_set_apo_at_peri@,
-  "setPeriAtApo",         mnv_node_set_peri_at_apo@
+  "setPeriAtApo",         mnv_node_set_peri_at_apo@,
+  "modRadiusAt",          mnv_node_mod_radius_at@
 ).
 
 ////
@@ -24,6 +25,7 @@ GLOBAL mnv_node is LEXICON(
 // @PARAM stageUntil          - The stage at which the autostage subsystem should stop if it is enabled. (Default: 0).
 // @PARAM allowRCs            - Allow this script to use RCS during the alignment phase. (Default: TRUE).
 // @PARAM autostage_algorithm - The algorithm delegate to use to determine when autostage should stage.  (Default: staging:algorithm:flameOut).
+// @PARAM roll                - Set the roll otherwise it's just going to use whatever roll position the ship is already in.
 // @RETURN - 0 on success other than 0 on error. 
 ////
 FUNCTION mnv_node_do {
@@ -33,6 +35,7 @@ FUNCTION mnv_node_do {
   PARAMETER stageUntil IS 0.
   PARAMETER allowRCS IS TRUE.
   PARAMETER autostage_algorithm IS staging:algorithm:flameOut.
+  PARAMETER roll IS SHIP:FACING:ROLL.
 
   LOCAL oldSAS IS SAS.
   LOCAL oldRCS IS RCS.
@@ -74,7 +77,7 @@ FUNCTION mnv_node_do {
   }
 
   // IF mcp ever works, get steering lock.
-  LOCK STEERING TO nd:DELTAV.
+  LOCK STEERING TO nd:DELTAV:DIRECTION + r(0, 0, roll).
   syslog:msg("Aligning.", syslog:level:info, "mnv:node:do").
   // We want our craft our hold burn vector for a full 5 seconds before we 
   // consider ourselves aligned.
@@ -181,16 +184,27 @@ FUNCTION mnv_node_circularize_periapsis {
 ////
 // Modify orbital altitude starting at a given time.
 // @PARAM utm - The universal time to undertake the burn.
-// @PARAM alt - The new altitude of the orbit.
+// @PARAM _rad - The new radius of the orbit opposite the burn.
 // @PARAM _obt - The orbit or patch for this burn.
 ////
-FUNCTION mnv_node_mod_alt_at {
+FUNCTION mnv_node_mod_radius_at {
   PARAMETER utm.
-  PARAMETER _alt.
+  PARAMETER _rad.
   PARAMETER _obt IS SHIP:ORBIT.
 
-  LOCAL targetRadius IS _obt:BODY:RADIUS + _alt.
-  LOCAL targetSMA IS targetRadius.
+  LOCAL burnRadius IS math:kepler:radiusAt(utm).
+  LOCAL targetSMA IS (_rad + burnRadius) / 2.
+  LOCAL dv IS math:kepler:visViva(targetSMA, _obt, burnRadius).
+  LOCAL side IS "Apoapsis".
+  IF _rad < burnRadius {
+    SET side TO "Periapsis".
+  }
+  syslog:msg(
+    "Setting " + side + " to " + _rad + " requires " + dv + " m/s^2.",
+    syslog:level:debug,
+    "mnv:node:modRadiusAt"
+  ).
+  RETURN NODE(utm, 0, 0, dv).
 }
 
 

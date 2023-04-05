@@ -11,16 +11,17 @@ GLOBAL launch_rocket IS LEXICON(
   "default_profile", LIST(
 //      (altitude, heading, throttle percent)
     LIST(0,     HEADING(90, 90), 1),
-    LIST(1500,  HEADING(90, 85), 1),
-    LIST(2500,  HEADING(90, 75), 1),
-    LIST(5000,  HEADING(90, 65), 1), 
-    LIST(7500,  HEADING(90, 55), 1),
+    LIST(1000,  HEADING(90, 85), 1),
+    LIST(2000,  HEADING(90, 75), 1),
+    LIST(4000,  HEADING(90, 65), 1), 
+    LIST(6500,  HEADING(90, 55), 1),
     LIST(10000, HEADING(90, 45), 1),
+    LIST(15000, HEADING(90, 35), 1),
     LIST(20000, HEADING(90, 30), 1),
-    LIST(30000, HEADING(90, 15), 1),
-    LIST(40000, HEADING(90, 5),  1),
-    LIST(50000, HEADING(90, 0), 1),
-    LIST(60000, HEADING(90, -5), 1)
+    LIST(25000, HEADING(90, 25), 1),
+    LIST(30000, HEADING(90,  0), 1),
+    LIST(40000, HEADING(90,  0), 1),
+    LIST(50000, HEADING(90, -5), 1)
   )
 ).
 

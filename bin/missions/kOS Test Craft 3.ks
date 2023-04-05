@@ -6,14 +6,14 @@ boot:require("syslog").
 
 syslog:init(syslog:level:trace, FALSE, PATH("0:/log/" + SHIP:NAME + ".log"), FALSE).
 runstage:load().
-SET max_runstage TO 6.
+SET max_runstage TO 8.
 
 UNTIL runstage:stage > max_runstage {
   SET skipBump TO FALSE.
   PRINT "Runstage " + runstage:stage + ".".
 	IF runstage:stage = 0 {
     PRINT "Doing launch.".
-		launch:rocket:go(launch:rocket:default_profile, 100000, TRUE, 3, 5, staging:algorithm:flameOut, LIST(5)).
+		launch:rocket:go(launch:rocket:default_profile, 100000, TRUE, 2, 5, staging:algorithm:flameOut@, LIST(4)).
     LOCK STEERING TO PROGRADE.
     PRINT "Launch routine complete.".
 	} ELSE IF runstage:stage = 1 {
@@ -80,12 +80,12 @@ UNTIL runstage:stage > max_runstage {
       KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + eta_pa - 30).
       WAIT 2.
     }
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.1).
+    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.5).
     SET clock TO TIME:SECONDS.
     KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + orbitTime - 30).
     WAIT 2.
 
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.1).
+    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.5).
     SET clock TO TIME:SECONDS - clock.
     IF math:helper:close(orbitTime, clock, 1) {
       PRINT "Testing elapsed time between true anomalies: Passed".
@@ -192,12 +192,13 @@ UNTIL runstage:stage > max_runstage {
       KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + eta_pa - 30).
       WAIT 3.
     }
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.01).
+    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.05).
     SET clock TO TIME:SECONDS.
+    PRINT "Here.".
     KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + orbitTime - 30).
     WAIT 3.
 
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.01).
+    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.05).
     SET clock TO TIME:SECONDS - clock.
     IF math:helper:close(orbitTime, clock, 1.5) {
       PRINT "Testing elapsed time between true anomalies: Passed".
@@ -243,6 +244,13 @@ UNTIL runstage:stage > max_runstage {
       }
       SET skipBump TO TRUE.
     }
+  } ELSE IF runstage:stage = 7 {
+    PRINT "Lowering orbit.".
+    SET downNode TO mnv:node:circularizePeriapsis().
+    ADD downNode.
+    WAIT 3.
+  } ELSE IF runstage:stage = 8 {
+    mnv:node:do(30, TRUE, TRUE, 2).
   }
   syslog:upload().
   IF NOT skipBump {
@@ -252,3 +260,4 @@ UNTIL runstage:stage > max_runstage {
   IF skipBump { BREAK. }.
 }
 syslog:shutdown().
+PRINT "Runstages Complete, ran up to " + (runstage:stage - 1)+ " out of " + max_runstage + " stages.".

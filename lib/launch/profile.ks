@@ -41,6 +41,7 @@ FUNCTION launch_profile_load {
     syslog:msg(msg, syslog:level:info, "launch:profile:load").
     LOCAL finalDirection IS offsetFunction(this[1]).
     LOCK STEERING TO finalDirection.
+    syslog:msg("Locking throttle to position specified by profile: " + this[2] + ".", syslog:level:debug, "launch:profile:load").
     LOCK THROTTLE TO this[2].
     if steps:LENGTH > 0 {
       launch_profile_load(steps).
