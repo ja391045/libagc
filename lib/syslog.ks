@@ -59,7 +59,8 @@ FUNCTION _syslog_linefmt {
 // Rotate the log.
 ////
 FUNCTION _syslog_rotate {
-  LOCAL curFh IS PATH(syslog["__path__"]):VOLUME:OPEN(syslog["__path__"]).
+  LOCAL sp IS PATH(syslog["__path__"]).
+  LOCAL curFh IS OPEN(sp).
   LOCAL curCont IS curFh:READALL.
   LOCAL newQueue IS QUEUE().
   LOCAL startIdx IS MAX(curCont:LENGTH - syslog["__rotate_keep__"], 0).
@@ -97,7 +98,6 @@ FUNCTION _syslog_process_queue {
   PARAMETER maxProcess IS 5.
 
   LOCAL processed IS 0.
-
   UNTIL syslog["__cache__"]:EMPTY OR processed >= maxProcess {
     IF syslog["__file__"]:SIZE >= syslog["__max_log_size__"] AND syslog["__rotate__"] {
       _syslog_rotate().

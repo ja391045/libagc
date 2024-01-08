@@ -27,7 +27,12 @@ FUNCTION parts_solarpanels_status {
 ////
 FUNCTION parts_solarpanels_get_deployable {
   LOCAL found IS SHIP:MODULESNAMED("ModuleDeployableSolarPanel").
+  LOCAL koperFound IS SHIP:MODULESNAMED("KopernicusSolarPanel").
   LOCAL names IS LIST().
+
+  for _mod_panel in koperFound {
+    found:ADD(_mod_panel).
+  }
 
   if syslog:logLevel >= syslog:level:debug {
     FOR panel IN found {
@@ -50,7 +55,21 @@ FUNCTION parts_solarpanels_get_deployable {
 ////
 FUNCTION parts_solarpanels_deploy {
   PARAMETER panels.
-  parts_event(panels, "extend solar panel", "ModuleDeployableSolarPanel").
+  
+  LOCAL _has_actions IS LIST().
+  LOCAL _has_events IS LIST().
+
+  for p in panels {
+    if p:HASACTION("extend solar panel") {
+      _has_actions:ADD(p).
+    }
+    if p:HASEVENT("extend solar panel") {
+      _has_events:ADD(p).
+    }
+  }
+
+  parts_act(_has_actions, "extend solar panel").
+  parts_event(_has_events, "extend solar panel").
 }
 
 ////
@@ -61,5 +80,19 @@ FUNCTION parts_solarpanels_deploy {
 ////
 FUNCTION parts_solarpanels_retract {
   PARAMETER panels.
-  parts_event(panels, "retract solar panel", "ModuleDeployableSolarPanel").
+
+  LOCAL _has_actions IS LIST().
+  LOCAL _has_events IS LIST().
+
+  for p in panels {
+    if p:HASACTION("extend solar panel") {
+      _has_actions:ADD(p).
+    }
+    if p:HASEVENT("extend solar panel") {
+      _has_events:ADD(p).
+    }
+  }
+
+  parts_act(_has_actions, "retract solar panel").
+  parts_event(_has_events, "retract solar panel").
 }

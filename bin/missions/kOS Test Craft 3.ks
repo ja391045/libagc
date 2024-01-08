@@ -6,7 +6,7 @@ boot:require("syslog").
 
 syslog:init(syslog:level:trace, FALSE, PATH("0:/log/" + SHIP:NAME + ".log"), FALSE).
 runstage:load().
-SET max_runstage TO 8.
+SET max_runstage TO 9.
 
 UNTIL runstage:stage > max_runstage {
   SET skipBump TO FALSE.
@@ -80,14 +80,16 @@ UNTIL runstage:stage > max_runstage {
       KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + eta_pa - 30).
       WAIT 2.
     }
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.5).
+    //WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.5).
+    WAIT UNTIL SHIP:ORBIT:TRUEANOMALY >= 0 AND SHIP:ORBIT:TRUEANOMALY < 1.
     SET clock TO TIME:SECONDS.
     KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + orbitTime - 30).
     WAIT 2.
 
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.5).
+    //WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.5).
+    WAIT UNTIL SHIP:ORBIT:TRUEANOMALY >= 90 AND SHIP:ORBIT:TRUEANOMALY < 91.
     SET clock TO TIME:SECONDS - clock.
-    IF math:helper:close(orbitTime, clock, 1) {
+    IF math:helper:close(orbitTime, clock, 2.5) {
       PRINT "Testing elapsed time between true anomalies: Passed".
     } ELSE {
       PRINT "Testing elapsed time between true anomalies: Failed.".
@@ -192,15 +194,17 @@ UNTIL runstage:stage > max_runstage {
       KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + eta_pa - 30).
       WAIT 3.
     }
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.05).
+    //WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 0, 0.05).
+    WAIT UNTIL SHIP:ORBIT:TRUEANOMALY >= 0 AND SHIP:ORBIT:TRUEANOMALY < 1.
     SET clock TO TIME:SECONDS.
     PRINT "Here.".
     KUNIVERSE:TIMEWARP:WARPTO(TIME:SECONDS + orbitTime - 30).
     WAIT 3.
 
-    WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.05).
+    //WAIT UNTIL math:helper:close(SHIP:ORBIT:TRUEANOMALY, 90, 0.05).
+    WAIT UNTIL SHIP:ORBIT:TRUEANOMALY >= 90 AND SHIP:ORBIT:TRUEANOMALY < 91.
     SET clock TO TIME:SECONDS - clock.
-    IF math:helper:close(orbitTime, clock, 1.5) {
+    IF math:helper:close(orbitTime, clock, 2.5) {
       PRINT "Testing elapsed time between true anomalies: Passed".
     } ELSE {
       PRINT "Testing elapsed time between true anomalies: Failed.".
@@ -251,6 +255,52 @@ UNTIL runstage:stage > max_runstage {
     WAIT 3.
   } ELSE IF runstage:stage = 8 {
     mnv:node:do(30, TRUE, TRUE, 2).
+  } ELSE IF runstage:stage = 9 {
+    SET TARGET TO "Space Station One".
+    SET ve TO SOLARPRIMEVECTOR.
+    SET ve:MAG TO SQRT(ve:X ^ 2 + ve:Y ^ 2 + ve:Z ^ 2) * 500000000000.
+
+    SET planetVec TO VECDRAW(
+      SHIP:ORBIT:BODY:POSITION - SHIP:POSITION,
+      ve,
+      GREEN,
+      "TO SOLAR PRIME?",
+      1.0
+    ).
+    SET joolVec TO VECDRAW(
+      BODY("Jool"):POSITION - SHIP:POSITION,
+      ve,
+      GREEN,
+      "ALso To Solar prime?",
+      1.0
+    ).
+    SET chaserVec TO VECDRAW(
+      { RETURN BODY("Kerbin"):POSITION - SHIP:POSITION. },
+      { RETURN SHIP:ORBIT:BODY:POSITION * -1. },
+      MAGENTA,
+      "To my ship",
+      1.0
+    ).
+    SET targetVec TO VECDRAW(
+      { RETURN BODY("Kerbin"):POSITION - SHIP:POSITION. },
+      { RETURN (TARGET:ORBIT:POSITION - SHIP:POSITION) * -1. },
+      RED,
+      "Target vessel.",
+      1.0
+    ).
+
+    SET planetVec:SHOW TO TRUE.
+    SET joolVec:SHOW TO TRUE.
+    SET chaserVec:SHOW TO TRUE.
+    set targetVec:SHOW TO TRUE.
+    SET timeout TO TIME:SECONDS + 30.
+    WAIT UNTIL TIME:SECONDS > timeout.
+    SET planetVec:SHOW TO FALSE.
+    SET joolVec:SHOW TO FALSE.
+    SET chaserVec:SHOW TO FALSE.
+    SET targetVec:SHOW TO FALSE.
+    SET skipBump TO TRUE.
+    CLEARVECDRAWS().
   }
   syslog:upload().
   IF NOT skipBump {

@@ -5,13 +5,82 @@ boot:require("telemetry").
 boot:require("syslog").
 boot:require("std").
 boot:require("math").
+boot:require("parts").
 
 GLOBAL staging_algorithm IS LEXICON(
   "thrustDropoff", staging_algorithm_thrust_dropoff@,
   "deltavSpent",   staging_algorithm_deltav_spent@,
   "resourceLeft",  staging_algorithm_resource_left@,
-  "flameOut", staging_algorithm_flameout@
+  "flameOut", staging_algorithm_flameout@,
+  "readyResources", staging_algorithm_ready_resources@
 ).
+
+
+////
+// A staging algorithm that will stage when what I'm dubbing "active resources"
+// are gone.  If an engine is active, and is consuming resources in the current stage, this
+// will return true when that engine has no more resources to consume in the current stage.
+// @PARAM - buffer   - A Lexicon that the algorithm can use to stash data which must be persisted
+//                     between runs.  Type conformity will not be checked.
+// @RETURN - boolean - True if staging is reuired, false otherwise.
+////
+FUNCTION staging_algorithm_ready_resources {
+  PARAMETER buffer.
+
+  LOCAL req_res_key IS "active_engine_resources".
+  LOCAL req_res IS LIST().
+  LOCAL need_stage IS FALSE.
+  LOCAL active_engs IS 0.
+  LOCAL msg IS "".
+  LOCAL avail_resource IS 0.
+
+  IF NOT buffer:HASKEY("stage_exam") {
+    buffer:ADD("stage_exam", STAGE:NUMBER - 1).
+  }
+  LOCAL stage_exam IS buffer["stage_exam"].
+
+  IF stage_exam < 0 {
+    RETURN FALSE.  // No stages left.
+  }
+
+  // gather a list of required resources unless we have it cached already, we want to 
+  // exclude ElectricCharge from engine required resources.
+  IF NOT buffer:HASKEY(req_res_key) {
+    SET active_engs TO parts:engines:active().
+    FOR eng IN active_engs {
+      FOR res IN eng:CONSUMEDRESOURCES:VALUES {
+        IF req_res:FIND(res:NAME) < 0 AND res:NAME <> "ElectricCharge" {
+          req_res:ADD(res:NAME).
+        }
+      }
+    }
+
+    IF syslog:logLevel >= syslog:level:debug {
+      SET msg TO "Unique list of required resources for ignited engines are '" + req_res + "'.".
+      syslog:msg(msg, syslog:level:debug, "staging:algorithm:readyResources").
+    }
+    buffer:ADD(req_res_key, req_res).
+  }
+   
+  // Get the resources the currently ignited engines need for the examined stage.
+  SET avail_resource TO telemetry:status:resourceByStage(buffer[req_res_key], stage_exam).
+  // If any of the required resources are 0 for this stage, we need to stage.
+  FOR res IN avail_resource[stage_exam]:VALUES {
+    IF math:helper:close(res["amount"], 0, 0.001) {
+      SET need_stage TO TRUE.
+    }
+  }  
+
+  IF need_stage {
+    // If we are staging, remove the list of required resources so it is re-created for the new
+    // stage upon next call.
+    SET msg TO "Stage is needed.  Required resource has run out: " + avail_resource + ".".
+    syslog:msg(msg, syslog:level:info, "staging:algorithm:readyResources"). 
+    buffer:REMOVE(req_res_key).
+    buffer:REMOVE("stage_exam").
+  }
+  RETURN need_stage.
+}
 
 ////
 // A simple, but dumb algorithm which decides a stage is called for 
@@ -46,8 +115,8 @@ FUNCTION staging_algorithm_thrust_dropoff {
       "prevThrust", prevThrust,
       "nowThrust",   nowThrust
     ).
-    LOCAL msgTxt IS std:string:sprintf("Current thrust is ${newThrust}, previous was ${prevThrust}", msgData).
-    syslog:msg(msgTxt, syslog:level:debug, "stage:algorithm:thrustDropoff").
+    LOCAL msgTxt IS std:string:sprintf("Current thrust is ${nowThrust}, previous was ${prevThrust}", msgData).
+    syslog:msg(msgTxt, syslog:level:trace, "stage:algorithm:thrustDropoff").
   }
 
   RETURN needStage.

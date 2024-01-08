@@ -7,6 +7,7 @@ boot:require("syslog").
 syslog:init(syslog:level:debug, TRUE).
 runstage:load().
 SET max_runstage TO 3.
+SET skip_bump TO FALSE.
 
 UNTIL runstage:stage > max_runstage {
   PRINT "Runstage " + runstage:stage + ".".
@@ -16,18 +17,24 @@ UNTIL runstage:stage > max_runstage {
     LOCK STEERING TO PROGRADE.
     PRINT "Launch routine complete.".
   } ELSE IF runstage:stage = 1 {
-    SET rv_node TO mnv:node:setPeriAtApo(300000).
+    SET rv_node TO mnv:node:setPeriAtApo(285000).
     ADD rv_node.
-    
-    
   } ELSE IF runstage:stage = 2 {
     // Execute the burn to rv.
-    mnv:node:do(30, FALSE, TRUE, 2).
-  } ELSE IF runstage:stage = 3 {
     mnv:node:do(30, TRUE, TRUE, 2).
+  } ELSE IF runstage:stage = 3 {
+    SET skip_bump TO TRUE.
+    SET TARGET TO "Space Station One".
+    
+    PRINT mnv:rendesvouz:coplanarPhaseAngle().
+    WAIT 20.
+    CLEARVECDRAWS().
   }
+     
   syslog:upload().
-  runstage:bump().
+  IF NOT skip_bump {
+    runstage:bump().
+  }
   runstage:preserve().
 }
 syslog:shutdown().

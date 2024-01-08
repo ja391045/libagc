@@ -64,7 +64,7 @@ FUNCTION staging_auto {
       } ELSE {
         SET staging["AUTOSTAGE_ACTIVE"] TO FALSE.
       }
-      WAIT 1.
+      WAIT 2.
     }
     SET staging_autostage_cancel TO FALSE. // We are canceling it now.
     RETURN staging:AUTOSTAGE_ACTIVE.

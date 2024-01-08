@@ -10,6 +10,7 @@ GLOBAL telemetry_tsiolkovsky IS LEXICON(
 
 FUNCTION telemetry_tsiolkovsky_fuel_mass {
   PARAMETER delta_v IS 0.
+  PARAMETER initialMass IS SHIP:MASS.
 
   LOCAL inv_dv IS delta_v * -1.
   LOCAL avg_ve IS telemetry_performance_avg_exhaust_velocity().
@@ -17,7 +18,8 @@ FUNCTION telemetry_tsiolkovsky_fuel_mass {
 
   IF avg_ve = 0 { SET avg_ve TO 1. }
 
-  SET answer TO (SHIP:MASS * CONSTANT:E ^ ( inv_dv / avg_ve)) / 1000.   // Convert to metric tons.
+
+  SET answer TO initialMass - (initialMass * CONSTANT:E ^ ( inv_dv / avg_ve)). 
   syslog:msg(
     "Mass of fuel required for " + delta_v + "m/s is " + answer + " mt.",
     syslog:level:debug,

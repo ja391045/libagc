@@ -178,7 +178,7 @@ FUNCTION parts_act {
       }
     } ELSE IF p:ISTYPE("PartModule") {
       syslog:msg("Action request on " + p:PART:TITLE + ".", syslog:level:debug, "parts:act").
-      SET m TO  p.
+      SET m TO p.
     } ELSE {
       SET skip TO TRUE.
       SET m TO FALSE.

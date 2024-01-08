@@ -21,9 +21,47 @@ GLOBAL math_kepler IS LEXICON(
     "meanToEccentric",     math_kepler_mean_to_eccentric@,
     "meanToEccentricR",    math_kepler_mean_to_eccentric_r@,
     "eccentricToTrue",     math_kepler_eccentric_to_true@,
-    "focusSeparation",     math_kepler_focus_separation@
+    "focusSeparation",     math_kepler_focus_separation@,
+    "eccentricityVector",  math_kepler_eccentricity_vector@,
+    "lineOfNodesVector",   math_kepler_line_of_nodes_vector@
 ).
 
+
+////
+// Calculate line of nodes vector of an orbit.
+// @PARAM _obt - The orbit to calculate for.
+// @RETURN - The line of nodes vector.
+////
+FUNCTION math_kepler_line_of_nodes_vector {
+    PARAMETER _obt IS SHIP:ORBIT.
+
+    LOCAL _ve IS SOLARPRIMEVECTOR.
+    LOCAL lonVec IS V(COS(_obt:LAN) * _ve:X, 0, SIN(_obt:LAN) * _ve:Z).
+    SET lonVec:MAG TO SQRT(lonVec:X ^ 2 + lonVec:Y ^ 2 + lonVec:Z ^ 2).
+    RETURN lonVec.
+}
+
+////
+// Calculate the eccentricity vector of an orbit.
+// The true anomaly term is separate form the orbit so that you can
+// pass in a true anomaly of a snapshot in time.
+// @PARAM _f   - The true anomaly.
+// @PARAM _obt - The orbit.
+// @RETURN - The eccentricity vector.
+////
+FUNCTION math_kepler_eccentricity_vector {
+    PARAMETER _f IS SHIP:ORBIT:TRUEANOMALY.
+    PARAMETER _obt IS SHIP:ORBIT.
+
+    LOCAL _a IS _obt:SEMIMAJORAXIS.
+    LOCAL _e IS _obt:ECCENTRICITY.
+    LOCAL _ve IS SOLARPRIMEVECTOR.
+    LOCAL _r IS _a * ( 1 - _e ^ 2 ) / ( 1 + _e * COS(_f) ).
+    LOCAL _eccVec IS V(_r * COS(_f) * _ve:X, 0, _r * SIN(_f) * _ve:Z).
+    SET _eccVec:MAG TO SQRT(_eccVec:X ^ 2 + _eccVec:Y ^ 2 + _eccVec:Z ^ 2).
+    PRINT "Eccentricity Vector: " + _eccVec + " |" + _eccVec:MAG + "|. (" + _ve:Y + ").".
+    RETURN _eccVec.
+}
 ////
 // Get the velocity required to achieve the minimum orbit altitude.
 // @PARAM _body - The body to examine.
@@ -467,7 +505,7 @@ FUNCTION math_kepler_mean_anomaly {
 // The basic idea here is to take the Mean Anomaly minus Mean Anomaly at epoch and divide by Mean
 // Motion.  This will give us a time from which we must then subtract the difference between now and
 // the epoch at which Mean Anomaly At Epoch was created.  
-//
+//`
 // @PARAM f                  - The anomaly to measure time until in degrees.  If more than 360 degrees are 
 //                             given then it will be wrapped, and whole orbital periods will be added for each 
 //                             additional 360.

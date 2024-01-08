@@ -8,7 +8,8 @@ GLOBAL _engines IS LEXICON(
   "unlockGimbal", parts_engine_unlock_gimbal@,
   "shutdown", parts_engine_shutdown@,
   "activate", parts_engine_activate@,
-  "swapMode", parts_engine_swap_mode@
+  "swapMode", parts_engine_swap_mode@,
+  "active", parts_engine_active@
 ).
 
 ////
@@ -99,4 +100,23 @@ FUNCTION parts_engine_activate {
       _e:ACTIVATE().
     }
   }
+}
+
+////
+// Get ignited engines list.
+// @RETURN - List - Engines that are currently active.
+////
+FUNCTION parts_engine_active {
+  LOCAL activeEngines is LIST().
+  LOCAL allEngines IS 0.
+  LOCAL eng IS 0.
+
+  LIST ENGINES IN allEngines.
+
+  FOR eng IN allEngines {
+    IF eng:IGNITION {
+      activeEngines:ADD(eng).
+    }
+  }
+  RETURN activeEngines.
 }
