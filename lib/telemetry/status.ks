@@ -5,10 +5,59 @@ boot:require("syslog").
 
 GLOBAL telemetry_status IS LEXICON(
     "resourceByStage", telemetry_status_resource_by_stage@,
-    "dryMassForStage", telemetry_status_dry_mass_for_stage@
+    "dryMassForStage", telemetry_status_dry_mass_for_stage@,
+    "massAtStage",     telemetry_status_mass_at_stage@
 ).
 
 
+////
+// Calculate the total delta-v present in a given stage.  This may not work correctly for weird setups with
+// crossfeed decoupler, fuel hoses, like asparagus staging.  It may need further refinement.
+// @PARAM _ship  - The ship to examine. (Default: SHIP).
+// @PARAM _filter - A list of engine name to filter out of the results (Default: LIST("sepMotor1"))
+// @RETURN - The cumulative delta-v in all stages.
+////
+FUNCTION telmetry_status_delta_v_for_stage {
+  PARAMETER _stage IS SHIP:STAGENUM.
+  PARAMETER _ship IS SHIP.
+  PARAMETER _filter IS LIST("sepMotor1").
+
+  LOCAL dv IS 0.
+  // TODO:  finish this up.
+
+}
+
+////
+// The mass of a vessel once staged down to _stage.
+// @PARAM _ship  - The ship to examine. (Default: SHIP).
+// @PARAM _stage - The stage number to examine. (Default: SHIP:STAGENUM - 1).
+// @RETURN - The calculated mass of the stage.
+////
+FUNCTION telemetry_status_mass_at_stage {
+  PARAMETER _ship IS SHIP.
+  PARAMETER _stage IS SHIP:STAGENUM - 1.
+
+  // A stag >= SHIP:STAGENUM doesn't change the ship's mass.
+  IF _stage < 0 OR _stage >= SHIP:STAGENUM {
+    RETURN SHIP:MASS.
+  }
+
+  IF _stage < 0 {
+    SET _stage TO 0.
+  }
+
+  LOCAL all_parts IS 0.
+  LOCAL sm IS SHIP:MASS.
+  LOCAL part IS FALSE.
+
+  LIST PARTS in all_parts.
+  FOR part IN PARTS {
+    IF part:STAGE > _stage {
+      SET sm TO sm - part:MASS.
+    }
+  }
+  RETURN sm.
+}
 
 ////
 // Get the dry mass for a given stage.

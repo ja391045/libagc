@@ -6,19 +6,23 @@ boot:require("std/struct/pqueue").
 ////
 
 GLOBAL std_atomic_pqueue IS LEXICON(
-  "init",  std_atomic_pqueue_init@,
-  "push",  std_atomic_pqueue_push@,
-  "pop",   std_atomic_pqueue_pop@,
-  "peek",  std_atomic_pqueue_peek@,
-  "empty", std_atomic_pqueue_empty@
+  "init",       std_atomic_pqueue_init@,
+  "push",       std_atomic_pqueue_push@,
+  "pop",        std_atomic_pqueue_pop@,
+  "peek",       std_atomic_pqueue_peek@,
+  "empty",      std_atomic_pqueue_empty@,
+  "foundation", std_atomic_pqueue_foundation@
 ).
 
 ////
 // Create a new atomic priority queue.
+// @PARAM _foundation - See std:struct:pqueue:init().
 // @RETURN - List - An initialized priority queue structure.
 ////
 FUNCTION std_atomic_pqueue_init {
-  LOCAL under IS std_struct_pqueue:init().
+  PARAMETER _foundation IS LIST().
+
+  LOCAL under IS std_struct_pqueue:init(_foundation).
   LOCAL mutex IS std_atomic_mutex:init().
   RETURN LIST(mutex, under).
 }
@@ -96,4 +100,14 @@ FUNCTION std_atomic_pqueue_empty {
   SET isEmpty TO std_struct_pqueue:empty(pqueue[1]).
   std_atomic_mutex:release(pqueue[0]).
   RETURN isEmpty.
+}
+
+////
+// Grab the foundation list that backs this priority queue, useful for serialization.
+// @RETURN - The List that backs this priority atomic queue.
+////
+FUNCTION std_atomic_pqueue_foundation {
+  PARAMETER pqueue.
+
+  RETURN pqueue[1].
 }

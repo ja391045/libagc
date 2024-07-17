@@ -23,6 +23,7 @@ FUNCTION telemetry_visual_positionAt {
     LOCAL pos IS positionAt(_ship, ut).
     LOCAL vel IS velocityAt(_ship, ut):ORBIT.
 
+    
     RETURN VECDRAW(pos, vel, _color, _ship:NAME).
 
 }

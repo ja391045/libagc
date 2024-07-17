@@ -31,7 +31,7 @@ UNTIL NOT insDirIter:NEXT {
   }
 }
 
-PRINT "    - Connect to KSC....".
+PRINT "Connect to KSC:  ".
 SET now TO TIME:SECONDS.
 SET timeout TO now + 10.
 IF ADDONS:RT:AVAILABLE {
@@ -41,15 +41,15 @@ IF ADDONS:RT:AVAILABLE {
   }
 
   IF now > timeout {
-    PRINT "Failed.".
+    PRINT "Failed." AT(18, 10).
     SET _BOOT_FAILED TO TRUE.
   } else {
-    PRINT "Success.".
+    PRINT "Success." AT(18, 10).
   }
 }
 
 IF NOT _BOOT_FAILED {
-  PRINT " Installing library bootloader....".
+  PRINT "Installing library bootloader:  ".
   IF _DEBUG_BOOT {
     COPYPATH(_BOOT_LIB_SRC, _BOOT_LIB_DST).
   } ELSE {
@@ -58,10 +58,10 @@ IF NOT _BOOT_FAILED {
   }
   
   IF NOT _BOOT_LIB_DST:VOLUME:EXISTS(_BOOT_LIB_DST:SEGMENTS:JOIN("/")) {
-    PRINT "Failed." AT (16, 35).
+    PRINT "Failed." AT (33, 11).
     SET _BOOT_FAILED TO TRUE.
   } ELSE {
-    PRINT "Success." AT (16,35).
+    PRINT "Success." AT (33,11).
   }
 }
 IF NOT _BOOT_FAILED {

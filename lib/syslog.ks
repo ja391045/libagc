@@ -1,11 +1,11 @@
 boot:require("std").
 
 GLOBAL syslog IS LEXICON(
-    "init",      syslog_init@,
-    "shutdown",  syslog_shutdown@,
-    "msg",       syslog_msg@,
-    "upload",    syslog_upload@,
-    "level",     LEXICON(
+    "init",          syslog_init@,
+    "shutdown",      syslog_shutdown@,
+    "msg",           syslog_msg@,
+    "upload",        syslog_upload@,
+    "level",         LEXICON(
       "crit",  0,
       "error", 1,
       "warn",  2,
@@ -13,12 +13,13 @@ GLOBAL syslog IS LEXICON(
       "debug", 4,
       "trace", 5
     ),
-    "logLevel",  0,
-    "__cache__", QUEUE(),
-    "__ready__", FALSE,
-    "__upload__", FALSE,
-    "__echo__", FALSE,
-    "__rotate__", TRUE
+    "logLevel",      0,
+    "__cache__",     QUEUE(),
+    "__ready__",     FALSE,
+    "__upload__",    FALSE,
+    "__echo__",      FALSE,
+    "__rotate__",    TRUE,
+    "__processing_", FALSE
 ).
 
 
@@ -97,6 +98,7 @@ FUNCTION _syslog_rotate {
 FUNCTION _syslog_process_queue {
   PARAMETER maxProcess IS 5.
 
+  SET syslog["__processing__"] TO TRUE.
   LOCAL processed IS 0.
   UNTIL syslog["__cache__"]:EMPTY OR processed >= maxProcess {
     IF syslog["__file__"]:SIZE >= syslog["__max_log_size__"] AND syslog["__rotate__"] {
@@ -111,6 +113,7 @@ FUNCTION _syslog_process_queue {
     }
     SET processed TO processed + 1.
   }
+  SET syslog["__processing__"] TO TRUE.
 }
 
 ////
@@ -183,8 +186,7 @@ FUNCTION syslog_init {
     syslog["__file__"]:READALL().
 
     SET syslog["__ready__"] TO TRUE.
-    WHEN NOT syslog["__cache__"]:EMPTY() THEN {
-      WAIT UNTIL NOT syslog["__upload__"].
+    WHEN NOT syslog["__cache__"]:EMPTY() AND NOT syslog["__upload__"] THEN {
       IF syslog["__ready__"] {
         _syslog_process_queue().
       }
@@ -237,11 +239,16 @@ FUNCTION syslog_upload {
 
   IF ksc_log_dst:TOSTRING = syslog["__path__"]:TOSTRING { PRINT "Done". RETURN TRUE. }.
 
+  SET syslog["__upload__"] TO TRUE.
+  WAIT UNTIL NOT syslog["__processing__"].
+  // Flush the remainder of the syslog cache.
+  _syslog_process_queue(syslog["__cache__"]:LENGTH).
+
   UNTIL done {
+    WAIT UNTIL NOT syslog["__processing__"].
+      
     IF HOMECONNECTION:ISCONNECTED {
-      SET syslog["__upload__"] TO TRUE.
       COPYPATH(syslog["__path__"], ksc_log_dst).
-      SET syslog["__upload__"] TO FALSE.
       SET success to TRUE.
       SET done TO TRUE.
     } ELSE {
@@ -251,6 +258,6 @@ FUNCTION syslog_upload {
       WAIT 1.
     }
   }
-  PRINT "Upload Done.".
+  SET syslog["__upload__"] TO FALSE.
   RETURN success.
 }

@@ -38,6 +38,7 @@ FUNCTION launch_rocket_go {
     PARAMETER autoStageAlgorithm IS staging:algorithm:flameOut@.
     PARAMETER noSafeStage IS LIST().
     PARAMETER profileOffset IS launch:profile:offsetNull@.
+    PARAMETER shortStop IS 6000.
 
     LOCAL ascentSteps IS QUEUE().
     LOCAL pctComplete IS 0.
@@ -58,8 +59,8 @@ FUNCTION launch_rocket_go {
       staging:auto(endStage, autoStageAlgorithm@, TRUE, noSafeStage).
     }
 
-    // Wait until we are withing .25% of target apoapsis, and let the launch profile do it's thing.
-    WAIT UNTIL SHIP:APOAPSIS > targetAltitude - 6000.
+    // Wait until we are withing some value of our target apoapsis, and let the launch profile do it's thing.
+    WAIT UNTIL SHIP:APOAPSIS > targetAltitude - shortStop.
     // If we are here and there are more ascent profile stages, cancel them.
     if launch:profile:active {
       launch:profile:stop().

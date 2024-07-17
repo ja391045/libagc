@@ -50,7 +50,7 @@ FUNCTION staging_auto {
   WHEN algorithm(buffer) OR staging_autostage_cancel THEN {
     IF STAGING:AUTOSTAGE_ACTIVE AND NOT staging_autostage_cancel {
       IF STAGE:NUMBER >= downTo {
-        if noSafeStage:FIND(STAGE:NUMBER) < 0 {
+        if noSafeStage:FIND(STAGE:NUMBER - 1) < 0 {
           syslog:msg("Safe staging stage " + STAGE:NUMBER + ".", syslog:level:info, "staging:auto").
           SET isSafeStage TO TRUE.
         } else {

@@ -4,6 +4,7 @@
 boot:require("parts/engines").
 boot:require("parts/controlsurfaces").
 boot:require("parts/solarpanels").
+boot:require("parts/rcs").
 
 GLOBAL parts IS LEXICON(
   "engines",           _engines,
@@ -16,7 +17,8 @@ GLOBAL parts IS LEXICON(
   "act",               parts_act@,
   "event",             parts_event@,
   "getField",          parts_get_field@,
-  "getFuelCellStatus", parts_get_fuel_cell_status@
+  "getFuelCellStatus", parts_get_fuel_cell_status@,
+  "rcs",               parts_rcs
 ).
 
 ////
@@ -74,11 +76,13 @@ FUNCTION parts_all_fuel_cells {
 FUNCTION parts_start_fuel_cells {
   PARAMETER cells.
   parts_act(cells, "start fuel cell", "ModuleResourceConverter").
+  parts_act(cells, "start fuel cell (lh20)", "ModuleResourceConverter").
 }
 
 FUNCTION parts_stop_fuel_cells {
   PARAMETER cells.
   parts_act(cells, "stop fuel cell", "ModuleResourceConverter", FALSE).
+  parts_act(cells, "stop fuel cell (lh20)", "ModuleResourceConverter", FALSE).
 }
 
 ////

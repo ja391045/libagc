@@ -16,6 +16,7 @@ GLOBAL mnv_node is LEXICON(
   "modRadiusAt",          mnv_node_mod_radius_at@
 ).
 
+
 ////
 // Execute a manuever node.
 // @PARAM align_time          - The buffer in seconds to get the ship the time it needs to orient towards the burn vector. The
@@ -27,6 +28,8 @@ GLOBAL mnv_node is LEXICON(
 // @PARAM autostage_algorithm - The algorithm delegate to use to determine when autostage should stage.  (Default: staging:algorithm:flameOut).
 // @PARAM roll                - Set the roll otherwise it's just going to use whatever roll position the ship is already in.
 // @PARAM stagedOffMass       - The amount of mass lost due to staging off empty tanks or other parts during the burn.
+// @PARAM burnPct             - The percentage of the burn to complete, expressed as a decimal,  by the time of the manuever node's ETA. For example
+//                              0 means to complete the burn entirely after the node's ETA, and 1 means to completel burn before the ETA. (Default 0.5)
 // @RETURN - 0 on success other than 0 on error. 
 ////
 FUNCTION mnv_node_do {
@@ -38,6 +41,7 @@ FUNCTION mnv_node_do {
   PARAMETER autostage_algorithm IS staging:algorithm:flameOut.
   PARAMETER roll IS SHIP:FACING:ROLL.
   PARAMETER stagedOffMass IS 0.
+  PARAMETER burnPct IS 0.5.
 
   LOCAL oldSAS IS SAS.
   LOCAL oldRCS IS RCS.
@@ -97,11 +101,10 @@ FUNCTION mnv_node_do {
   
   LOCAL timeout IS TIME:SECONDS + align_time.
   LOCAL count IS 0.
-  LOCAL _vangle IS 0.
+  LOCAL LOCK _vangle TO VANG(nd:DELTAV, SHIP:FACING:VECTOR).
   LOCAL _t_remain IS 0.
 
   UNTIL count > 4 OR TIME:SECONDS > timeout {
-    LOCK _vangle TO VANG(nd:DELTAV, SHIP:FACING:VECTOR).
     IF math:helper:close(_vangle, 0, 0.5) {
       SET count TO count + 1.
     } ELSE {
@@ -111,7 +114,7 @@ FUNCTION mnv_node_do {
     IF syslog:loglevel >= syslog:level:debug {
       SET _t_remain TO timeout - TIME:SECONDS.
       LOCAL _dbg_res IS "Angle off target is " + _vangle + " degrees.  Held for a " + count + " count. " + _t_remain + " seconds remaining.".
-      syslog:msg(_dbg_res, syslog:level:debug, "mnv:node:do").
+      syslog:msg(_dbg_res, syslog:level:trace, "mnv:node:do").
     }
   }
   UNLOCK _vangle.
@@ -127,7 +130,7 @@ FUNCTION mnv_node_do {
     SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
     SET SAS TO oldSAS.
     SET RCS TO oldRCS.
-    RETURN 1.
+    RETURN FALSE.
   }
   syslog:msg("Alignment complete.",  syslog:level:info, "mnv:node:do").
   IF autowarp {
@@ -143,7 +146,7 @@ FUNCTION mnv_node_do {
 
   SET nd TO NEXTNODE.
   syslog:msg("Node in " + ROUND(nd:ETA, 1) + " s. Waiting " + ROUND((nd:ETA - burn_tm / 2), 1) + "s for burn start.", syslog:level:info, "mnv_node_do").
-  WAIT UNTIL nd:ETA <= (burn_tm / 2).
+  WAIT UNTIL nd:ETA <= burn_tm * burnPct.
 
   LOCK THROTTLE TO tset.
   LOCK acc_lock TO telemetry:performance:availableAccel().
@@ -180,7 +183,7 @@ FUNCTION mnv_node_do {
   SET RCS TO oldRCS.
   syslog:msg("Node complete, remaining DV is: " + ROUND(nd:DELTAV:MAG, 2)+ "m/s", syslog:level:info, "mnv_node_do").
   REMOVE nd.
-  RETURN 0.
+  RETURN TRUE.
 }
 
 ////

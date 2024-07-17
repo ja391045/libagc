@@ -11,6 +11,7 @@ GLOBAL math_kepler IS LEXICON(
     "timeFromPeri",        math_kepler_time_from_peri@,
     "eccentricAnomaly",    math_kepler_eccentric_anomaly@,
     "meanAnomaly",         math_kepler_mean_anomaly@,
+    "meanAnomalyAt",       math_kepler_mean_anomaly_at@,
     "meanMotion",          math_kepler_mean_motion@,
     "radiusAt",            math_kepler_radiusat@,
     "period",              math_kepler_period@,
@@ -23,9 +24,58 @@ GLOBAL math_kepler IS LEXICON(
     "eccentricToTrue",     math_kepler_eccentric_to_true@,
     "focusSeparation",     math_kepler_focus_separation@,
     "eccentricityVector",  math_kepler_eccentricity_vector@,
-    "lineOfNodesVector",   math_kepler_line_of_nodes_vector@
+    "lineOfNodesVector",   math_kepler_line_of_nodes_vector@,
+    "eccentricity",        math_kepler_eccentricity@,
+    "semiMajorAxis",       math_kepler_sma@,
+    "sma",                 math_kepler_sma@,
+    "smaAtCutoff",         math_kepler_sma_at_cutoff@
 ).
 
+
+////
+// Use Vis Viva to calculate th a vessel's semi-major-axis given the radius and velocity of the 
+// vessel.  This is used to determine the parameters of an orbit at engine given cutoff, like MECO
+// or SECO on the way up to orbit.
+// @PARAM _v    - The velocity of the craft at engine cutoff.
+// @PARAM _alt  - The altitude of the craft at engine cutoff.
+// @PARAM _body - The body the craft is launching from. (Default: SHIP:BODY).
+// @RETURN - The semi major axis of an orbit.
+////
+FUNCTION math_kepler_sma_at_cutoff {
+  PARAMETER _v.
+  PARAMETER _alt.
+  PARAMETER _body IS SHIP:BODY.
+
+  RETURN 1 / ( 2 / (_body:RADIUS + _alt) - _v ^ 2 / _body:MU ).
+}
+
+////
+// Calculate a semi-major axis.  In most cases you'll use ORBIT:SEMIMAJORAXIS.  However
+// if you are creating a new obrit, this is pretty easy.
+// ** Remember these values are radii, not alititude.
+// @PARAM _a - The apoapsis.
+// @PARAM _p - The periapsis.
+// @RETURN - The semimajor axis of the given apoapsis and periapsis.
+////
+FUNCTION math_kepler_sma {
+  PARAMETER _a.
+  PARAMETER _p.
+
+  RETURN (_a + _p) / 2.
+}
+////
+// Calculate the eccentricity of an orbit given a periapsis radius and a 
+// apoapsis radius.
+// @PARAM - ra - radius of the apoapsis.
+// @PARAM - rp - radius of the periapsis.
+// @RETURN - The eccentricity value.
+////
+FUNCTION math_kepler_eccentricity {
+  PARAMETER ra.
+  PARAMETER rp.
+
+  RETURN (ra - rp) / (ra + rp).
+}
 
 ////
 // Calculate line of nodes vector of an orbit.
@@ -97,17 +147,19 @@ FUNCTION math_kepler_min_orbit_r {
 // this quick and dirty function can be easily called instead.
 // @PARAMETER _a    - Semi-major axis.
 // @PARAMETER _body - The body being orbited.
-// @RETURN - The period of the orbit described around the body described.
+// @RETURN - The period of the orbit described around the body described expressed as a time span.
 ////
 FUNCTION math_kepler_period {
     PARAMETER _a.
     PARAMETER _body IS SHIP:BODY.
     
-    RETURN 2 * CONSTANT:PI * SQRT(a ^ 3 / _body:MU).
+    LOCAL _t IS 2 * CONSTANT:PI * SQRT(_a ^ 3 / _body:MU).
+    RETURN TIMESPAN(_t).
 }
 
 ////
-// Use Vis Viva to get the orbital radius of a vessel at a future point in time..
+// Use Vis Viva to get the orbital radius of a vessel at a future point in time.  This requires
+// a newton-raphson convergence, and is expensive.
 // @PARAM _ut   - The universal time to predict.
 // @PARAM _ship - The ship to calculate for.
 // @RETURN - The radius of the orbit at a given point in time.
@@ -125,7 +177,7 @@ FUNCTION math_kepler_radiusat {
 
     LOCAL _obt IS ORBITAT(_ship, _ut).
     LOCAL _e IS _obt:ECCENTRICITY.
-    LOCAL _ta IS _obt:TRUEANOMALY.
+    LOCAL _ta IS math_kepler_true_anomaly_at(_ut, _obt, 1).
     LOcaL _a IS _obt:SEMIMAJORAXIS.
     LOCAL _r IS _a * ( 1 - _e ^ 2 ) / (1 + _e * COS(_ta)).
 
@@ -482,6 +534,26 @@ FUNCTION math_kepler_mean_anomaly {
     // hyperbolic
     RETURN _e * math:helper:sinh(ea) - ea * CONSTANT:RADTODEG.
 }
+
+
+////
+// Calculate a vessel's mean anomaly at a give time.
+// @PARAM  _obt - The orbit to examine.
+// @PARAM _t    - The epoch time to calculate for.
+// @RETURN      - The mean anomaly at the given time.
+FUNCTION math_kepler_mean_anomaly_at {
+  PARAMETER _obt IS SHIP:ORBIT.
+  PARAMETER _t IS TIME:SECONDS.
+
+  IF _t:ISTYPE("TimeStamp") {
+    SET _t TO _t:SECONDS.
+  }
+
+  LOCAL _dt IS _t - _obt:EPOCH.
+  LOCAL _n IS math_kepler_mean_motion(SHIP:ORBIT).
+  RETURN math:helper:clampTo360(_obt:MEANANOMALYATEPOCH + _n * _dt).
+}
+
 
 ////
 // Calculate the mean motion of the orbit specified.

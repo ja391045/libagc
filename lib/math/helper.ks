@@ -31,7 +31,7 @@ FUNCTION math_helper_accuracy_degrees {
   LOCAL _max_accuracy IS 0.0000000001.
   LOCAL _min_accuracy IS 0.0001.
 
-  LOCAL require IS 1000 / (_obt:PERIOD ^ 2).
+  LOCAL require IS ROUND(1000 / (_obt:PERIOD ^ 2), 10).
 
   IF require > _min_accuracy {
     RETURN _min_accuracy.

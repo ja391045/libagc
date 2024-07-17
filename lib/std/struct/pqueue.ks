@@ -12,9 +12,14 @@ GLOBAL std_struct_pqueue IS LEXICON(
 
 ////
 // Creates a new priority queue instance, backed by LIST().
+// @PARAM _foundation - Use the passed in LIST() as the foundation of this priority queue instead of an empty LIST(). (Default: LIST()).
 // @RETURN - List - New priority queue.
 ////
 FUNCTION std_struct_pqueue_init {
+  PARAMETER _foundation IS LIST().
+  IF _foundation:ISTYPE("List") {
+    RETURN _foundation.
+  }
   RETURN LIST().
 }
 
