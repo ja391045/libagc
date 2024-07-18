@@ -13,13 +13,10 @@ GLOBAL parts_rcs_traverse_direction IS LEXICON(
   "left",      6
 ).
 
-GLOBAL parts_rcs_part_patterns IS LIST(".*rcs.*").
-
 GLOBAL parts_rcs_part_default_module_names IS LIST("ModuleRCSFX").
 
 GLOBAL parts_rcs IS LEXICON(
-  "defaultPartPatterns",  parts_rcs_part_patterns,
-  "defaultModuleNames",   parts_rcs_part_default_module_names, 
+  "thrustModuleNames",    parts_rcs_part_thrust_module_names, 
   "setThrustLimiter",     parts_rcs_set_thrust_limiter@,
   "storeThrustLimiter",   parts_rcs_store_thrust_limiter@,
   "restoreThrustLimiter", parts_rcs_restore_thrust_limiter@,
@@ -32,8 +29,19 @@ GLOBAL parts_rcs IS LEXICON(
   "isAlignedStarboard",   parts_rcs_is_aligned_starboard@,
   "isAlignedPort",        parts_rcs_is_aligned_port@,
   "traverseDirection",    parts_rcs_traverse_direction,
-  "getTraverseThrustFor", parts_rcs_get_traverse_thrust_for@
+  "getTraverseThrustFor", parts_rcs_get_traverse_thrust_for@,
+  "__cache__",            LIST()
 ).
+
+////
+// Get a list of RCS thrusters attached to this ship.  Also, cache this list for future use
+// until said cache is manually expired.  For instance, it might be wise to call 
+// @RETURN - A list of RCS attached to this ship.
+////
+FUNCTION parts_rcs_thrusters {
+  IF 
+
+}
 
 
 ////
